@@ -1,0 +1,46 @@
+# Braza SSO — Caddy reverse proxy config
+# Replace sso.yourdomain.com with your actual domain.
+# Caddy auto-provisions TLS via Let's Encrypt.
+
+sso.yourdomain.com {
+    # API routes
+    handle /api/* {
+        uri strip_prefix /api
+        reverse_proxy api:8080
+    }
+
+    # OAuth / OIDC well-known routes
+    handle /.well-known/* {
+        reverse_proxy api:8080
+    }
+
+    handle /oauth/* {
+        reverse_proxy api:8080
+    }
+
+    handle /auth/* {
+        reverse_proxy api:8080
+    }
+
+    handle /account/* {
+        reverse_proxy api:8080
+    }
+
+    # Frontend SPA (catch-all)
+    handle {
+        reverse_proxy frontend:80
+    }
+
+    # Security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    log {
+        output stdout
+        format json
+    }
+}
