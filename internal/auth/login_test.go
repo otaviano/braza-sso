@@ -160,7 +160,7 @@ func mustUserWithPassword(email, password, pepper string) *user.User {
 const testPepper = "test-pepper"
 
 func newLoginHandler(repo *fakeLoginRepo, store *fakeLoginTokenStore) *LoginHandler {
-	return NewLoginHandlerWithDeps(repo, store, &fakeJWT{}, &fakeMailer{}, testPepper, "http://localhost", "braza-sso")
+	return NewLoginHandlerWithDeps(repo, store, &fakeJWT{}, &loginFakeMailer{}, testPepper, "http://localhost", "braza-sso")
 }
 
 func TestLogin_Success(t *testing.T) {
@@ -227,7 +227,7 @@ func TestLogin_WrongPassword(t *testing.T) {
 func TestLogin_AccountLockoutAfterFiveFailures(t *testing.T) {
 	repo := newFakeLoginRepo()
 	store := newFakeLoginTokenStore()
-	mailer := &fakeMailer{}
+	mailer := &loginFakeMailer{}
 	u := mustUserWithPassword("user@example.com", "ValidPass1!aaa", testPepper)
 	repo.add(u)
 

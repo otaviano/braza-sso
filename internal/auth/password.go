@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strings"
 	"unicode"
 
 	"golang.org/x/crypto/argon2"
@@ -105,31 +106,30 @@ func HashPassword(password, pepper string) (string, error) {
 
 // VerifyPassword checks a password+pepper against a stored Argon2id hash.
 // Uses constant-time comparison to prevent timing attacks.
+//
+// Expected format: $argon2id$v=<v>$m=<m>,t=<t>,p=<p>$<salt_base64>$<hash_base64>
 func VerifyPassword(password, pepper, encodedHash string) error {
-	var version, memory, time, threads uint32
-	var saltB64, hashB64 string
+	// Split on $ — produces ["", "argon2id", "v=19", "m=65536,t=3,p=4", "<salt>", "<hash>"]
+	parts := strings.SplitN(encodedHash, "$", 6)
+	if len(parts) != 6 || parts[0] != "" || parts[1] != "argon2id" {
+		return ErrInvalidHash
+	}
 
-	_, err := fmt.Sscanf(
-		encodedHash,
-		"$argon2id$v=%d$m=%d,t=%d,p=%d$%s",
-		&version, &memory, &time, &threads, &saltB64,
-	)
+	var version uint32
+	if _, err := fmt.Sscanf(parts[2], "v=%d", &version); err != nil {
+		return ErrInvalidHash
+	}
+
+	var memory, timeCost, threads uint32
+	if _, err := fmt.Sscanf(parts[3], "m=%d,t=%d,p=%d", &memory, &timeCost, &threads); err != nil {
+		return ErrInvalidHash
+	}
+
+	salt, err := base64.RawStdEncoding.DecodeString(parts[4])
 	if err != nil {
 		return ErrInvalidHash
 	}
-
-	// Split off the hash part after the last $
-	parts := splitLast(encodedHash, "$")
-	if len(parts) != 2 {
-		return ErrInvalidHash
-	}
-	hashB64 = parts[1]
-
-	salt, err := base64.RawStdEncoding.DecodeString(saltB64)
-	if err != nil {
-		return ErrInvalidHash
-	}
-	expectedHash, err := base64.RawStdEncoding.DecodeString(hashB64)
+	expectedHash, err := base64.RawStdEncoding.DecodeString(parts[5])
 	if err != nil {
 		return ErrInvalidHash
 	}
@@ -137,30 +137,15 @@ func VerifyPassword(password, pepper, encodedHash string) error {
 	computed := argon2.IDKey(
 		[]byte(password+pepper),
 		salt,
-		time,
+		timeCost,
 		memory,
 		uint8(threads),
 		uint32(len(expectedHash)),
 	)
 
-	// Constant-time comparison
 	if subtle.ConstantTimeCompare(computed, expectedHash) != 1 {
 		return ErrHashMismatch
 	}
 
 	return nil
-}
-
-func splitLast(s, sep string) []string {
-	idx := -1
-	for i := len(s) - 1; i >= 0; i-- {
-		if string(s[i]) == sep {
-			idx = i
-			break
-		}
-	}
-	if idx < 0 {
-		return []string{s}
-	}
-	return []string{s[:idx], s[idx+1:]}
 }

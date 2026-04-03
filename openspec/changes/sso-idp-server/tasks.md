@@ -54,14 +54,14 @@
 
 ## 7. User Authentication & Session Management
 
-- [ ] 7.1 Implement `POST /auth/login` endpoint: look up user by email, verify Argon2id hash + pepper
-- [ ] 7.2 Implement failed attempt tracking in Redis with 15-minute sliding window
-- [ ] 7.3 Implement account lockout after 5 failed attempts (30-minute lockout, send unlock email)
-- [ ] 7.4 Implement JWT RS256 access token issuance (15-minute TTL, claims: sub, iss, aud, exp, iat, jti, email, email_verified)
-- [ ] 7.5 Implement opaque refresh token generation, storage in Redis (7-day TTL), set as HttpOnly Secure SameSite=Strict cookie
-- [ ] 7.6 Implement `POST /auth/token/refresh` with refresh token rotation (invalidate old, issue new)
-- [ ] 7.7 Detect refresh token reuse: invalidate all sessions for user, return 401
-- [ ] 7.8 Write unit tests for login, lockout, and token refresh flows
+- [x] 7.1 Implement `POST /auth/login` endpoint: look up user by email, verify Argon2id hash + pepper
+- [x] 7.2 Implement failed attempt tracking in Redis with 15-minute sliding window
+- [x] 7.3 Implement account lockout after 5 failed attempts (30-minute lockout, send unlock email)
+- [x] 7.4 Implement JWT RS256 access token issuance (15-minute TTL, claims: sub, iss, aud, exp, iat, jti, email, email_verified)
+- [x] 7.5 Implement opaque refresh token generation, storage in Redis (7-day TTL), set as HttpOnly Secure SameSite=Strict cookie
+- [x] 7.6 Implement `POST /auth/token/refresh` with refresh token rotation (invalidate old, issue new)
+- [x] 7.7 Detect refresh token reuse: invalidate all sessions for user, return 401
+- [x] 7.8 Write unit tests for login, lockout, and token refresh flows
 
 ## 8. Password Management
 
