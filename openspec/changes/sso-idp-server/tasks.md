@@ -65,9 +65,9 @@
 
 ## 8. Password Management
 
-- [ ] 8.1 Implement `POST /auth/password/reset-request`: generate reset token (Redis, 1h TTL), send email (always return 200)
-- [ ] 8.2 Implement `POST /auth/password/reset`: validate token, update password hash, invalidate all Redis sessions
-- [ ] 8.3 Write unit tests for password reset flow
+- [x] 8.1 Implement `POST /auth/password/reset-request`: generate reset token (Redis, 1h TTL), send email (always return 200)
+- [x] 8.2 Implement `POST /auth/password/reset`: validate token, update password hash, invalidate all Redis sessions
+- [x] 8.3 Write unit tests for password reset flow
 
 ## 9. Two-Factor Authentication (TOTP)
 

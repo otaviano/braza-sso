@@ -98,6 +98,11 @@ func main() {
 	r.Post("/auth/login", loginHandler.Login)
 	r.Post("/auth/token/refresh", loginHandler.Refresh)
 
+	// Password reset
+	pwdResetHandler := auth.NewPasswordResetHandler(userRepo, tokenStore, mailer, cfg.Pepper, cfg.BaseURL)
+	r.Post("/auth/password/reset-request", pwdResetHandler.ResetRequest)
+	r.Post("/auth/password/reset", pwdResetHandler.Reset)
+
 	// HTTP server with graceful shutdown
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
