@@ -13,9 +13,11 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
+	"github.com/otaviano/braza-sso/internal/auth"
 	"github.com/otaviano/braza-sso/internal/cache"
 	"github.com/otaviano/braza-sso/internal/config"
 	"github.com/otaviano/braza-sso/internal/db"
+	"github.com/otaviano/braza-sso/internal/oauth"
 )
 
 func main() {
@@ -70,6 +72,13 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("ok"))
 	})
+
+	// JWT token service + JWKS
+	tokenSvc, err := auth.NewTokenService(cfg.JWTPrivateKeyPath, cfg.JWTIssuer, cfg.JWTAccessTokenTTL)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to load JWT private key")
+	}
+	r.Get("/oauth/jwks.json", oauth.JWKSHandler(tokenSvc))
 
 	// HTTP server with graceful shutdown
 	srv := &http.Server{
