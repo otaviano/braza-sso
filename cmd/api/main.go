@@ -93,6 +93,11 @@ func main() {
 	r.Get("/auth/verify-email", regHandler.VerifyEmail)
 	r.Post("/auth/resend-verification", regHandler.ResendVerification)
 
+	// Login & token refresh
+	loginHandler := auth.NewLoginHandler(userRepo, tokenStore, tokenSvc, mailer, cfg.Pepper, cfg.BaseURL, cfg.JWTIssuer)
+	r.Post("/auth/login", loginHandler.Login)
+	r.Post("/auth/token/refresh", loginHandler.Refresh)
+
 	// HTTP server with graceful shutdown
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,

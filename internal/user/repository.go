@@ -89,6 +89,13 @@ func (r *Repository) UpdateFailedAttempts(id uuid.UUID, attempts int, lockedUnti
 		attempts, lockedUntil, time.Now().UTC(), id).Exec()
 }
 
+// UpdateFailedAttemptsReset clears the failed login counter and lock.
+func (r *Repository) UpdateFailedAttemptsReset(id uuid.UUID) error {
+	return r.session.Query(`
+		UPDATE users SET failed_attempts = 0, locked_until = null, updated_at = ? WHERE user_id = ?`,
+		time.Now().UTC(), id).Exec()
+}
+
 // UpdatePassword replaces the password hash and resets failed attempts.
 func (r *Repository) UpdatePassword(id uuid.UUID, hash string) error {
 	return r.session.Query(`

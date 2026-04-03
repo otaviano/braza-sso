@@ -11,12 +11,19 @@ import (
 )
 
 const (
-	prefixEmailVerify   = "email_verify:"
-	prefixPasswordReset = "pwd_reset:"
-	prefixRefreshToken  = "refresh:"
-	prefixUserSessions  = "user_sessions:"
-	prefixMFASession    = "mfa_session:"
-	prefixRateLimit     = "rate:"
+	prefixEmailVerify    = "email_verify:"
+	prefixPasswordReset  = "pwd_reset:"
+	prefixRefreshToken   = "refresh:"
+	prefixUserSessions   = "user_sessions:"
+	prefixMFASession     = "mfa_session:"
+	prefixRateLimit      = "rate:"
+	prefixLoginAttempts  = "login_attempts:"
+)
+
+const (
+	maxLoginAttempts    = 5
+	loginAttemptWindow  = 15 * time.Minute
+	lockoutDuration     = 30 * time.Minute
 )
 
 // ErrTokenNotFound is returned when a token does not exist or has expired.
@@ -118,6 +125,30 @@ func (ts *TokenStore) ConsumeMFASession(ctx context.Context, token string) (stri
 	}
 	return userID, err
 }
+
+// IncrLoginAttempts increments the failed login counter for userID within the sliding window.
+// Returns the new count.
+func (ts *TokenStore) IncrLoginAttempts(ctx context.Context, userID string) (int64, error) {
+	key := prefixLoginAttempts + userID
+	pipe := ts.redis.Pipeline()
+	incr := pipe.Incr(ctx, key)
+	pipe.Expire(ctx, key, loginAttemptWindow)
+	if _, err := pipe.Exec(ctx); err != nil {
+		return 0, err
+	}
+	return incr.Val(), nil
+}
+
+// ResetLoginAttempts clears the failed login counter for userID.
+func (ts *TokenStore) ResetLoginAttempts(ctx context.Context, userID string) error {
+	return ts.redis.Del(ctx, prefixLoginAttempts+userID).Err()
+}
+
+// MaxLoginAttempts returns the configured threshold before lockout.
+func MaxLoginAttempts() int { return maxLoginAttempts }
+
+// LockoutDuration returns the configured lockout period.
+func LockoutDuration() time.Duration { return lockoutDuration }
 
 func randomToken(n int) string {
 	b := make([]byte, n)
