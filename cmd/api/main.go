@@ -17,7 +17,9 @@ import (
 	"github.com/otaviano/braza-sso/internal/cache"
 	"github.com/otaviano/braza-sso/internal/config"
 	"github.com/otaviano/braza-sso/internal/db"
+	"github.com/otaviano/braza-sso/internal/email"
 	"github.com/otaviano/braza-sso/internal/oauth"
+	"github.com/otaviano/braza-sso/internal/user"
 )
 
 func main() {
@@ -79,6 +81,17 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to load JWT private key")
 	}
 	r.Get("/oauth/jwks.json", oauth.JWKSHandler(tokenSvc))
+
+	// Repositories & services
+	userRepo := user.NewRepository(cassSession)
+	tokenStore := auth.NewTokenStore(redisClient)
+	mailer := email.NewSMTPSender(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPass, cfg.SMTPFrom)
+
+	// Registration & email verification
+	regHandler := auth.NewRegistrationHandler(userRepo, tokenStore, mailer, cfg.Pepper, cfg.BaseURL)
+	r.Post("/auth/register", regHandler.Register)
+	r.Get("/auth/verify-email", regHandler.VerifyEmail)
+	r.Post("/auth/resend-verification", regHandler.ResendVerification)
 
 	// HTTP server with graceful shutdown
 	srv := &http.Server{
