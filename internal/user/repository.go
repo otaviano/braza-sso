@@ -1,3 +1,4 @@
+// Package user defines the User domain model and its Cassandra-backed repository.
 package user
 
 import (
@@ -21,8 +22,16 @@ func NewRepository(session *gocql.Session) *Repository {
 }
 
 // Create inserts a new user. Returns ErrEmailTaken if email exists.
+// It also writes to the users_by_email lookup table to avoid ALLOW FILTERING.
+//
+// Required schema (apply once before deploying):
+//
+//	CREATE TABLE IF NOT EXISTS users_by_email (
+//	    email   TEXT PRIMARY KEY,
+//	    user_id UUID
+//	);
 func (r *Repository) Create(u *User) error {
-	// Lightweight duplicate check via the email index
+	// Lightweight duplicate check via the lookup table (O(1) partition key read).
 	existing, err := r.FindByEmail(u.Email)
 	if err == nil && existing != nil {
 		return ErrEmailTaken
@@ -32,7 +41,7 @@ func (r *Repository) Create(u *User) error {
 	u.CreatedAt = now
 	u.UpdatedAt = now
 
-	return r.session.Query(`
+	if err := r.session.Query(`
 		INSERT INTO users
 		  (user_id, email, password_hash, email_verified, totp_enabled, totp_secret,
 		   locked_until, failed_attempts, created_at, updated_at)
@@ -40,6 +49,13 @@ func (r *Repository) Create(u *User) error {
 		u.ID, u.Email, u.PasswordHash, u.EmailVerified,
 		u.TOTPEnabled, u.TOTPSecret, u.LockedUntil, u.FailedAttempts,
 		u.CreatedAt, u.UpdatedAt,
+	).Exec(); err != nil {
+		return err
+	}
+
+	return r.session.Query(`
+		INSERT INTO users_by_email (email, user_id) VALUES (?, ?)`,
+		u.Email, u.ID,
 	).Exec()
 }
 
@@ -59,20 +75,21 @@ func (r *Repository) FindByID(id uuid.UUID) (*User, error) {
 	return u, err
 }
 
-// FindByEmail retrieves a user by email address (uses secondary index).
+// FindByEmail retrieves a user by email using the users_by_email lookup table.
+// This avoids ALLOW FILTERING by resolving the email to a user_id first (O(1) partition read),
+// then fetching the user by primary key.
 func (r *Repository) FindByEmail(email string) (*User, error) {
-	u := &User{}
+	var userID uuid.UUID
 	err := r.session.Query(`
-		SELECT user_id, email, password_hash, email_verified, totp_enabled, totp_secret,
-		       locked_until, failed_attempts, created_at, updated_at
-		FROM users WHERE email = ? LIMIT 1 ALLOW FILTERING`, email).
-		Scan(&u.ID, &u.Email, &u.PasswordHash, &u.EmailVerified,
-			&u.TOTPEnabled, &u.TOTPSecret, &u.LockedUntil, &u.FailedAttempts,
-			&u.CreatedAt, &u.UpdatedAt)
+		SELECT user_id FROM users_by_email WHERE email = ?`, email).
+		Scan(&userID)
 	if errors.Is(err, gocql.ErrNotFound) {
 		return nil, ErrNotFound
 	}
-	return u, err
+	if err != nil {
+		return nil, err
+	}
+	return r.FindByID(userID)
 }
 
 // SetEmailVerified marks the user's email as verified.
