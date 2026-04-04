@@ -214,7 +214,7 @@ func (h *OAuthHandlers) handleAuthCode(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
-	json.NewEncoder(w).Encode(tokenResponse{
+	_ = json.NewEncoder(w).Encode(tokenResponse{
 		AccessToken: accessToken,
 		TokenType:   "Bearer",
 		ExpiresIn:   900,
@@ -245,7 +245,7 @@ func (h *OAuthHandlers) handleClientCredentials(w http.ResponseWriter, r *http.R
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
-	json.NewEncoder(w).Encode(tokenResponse{
+	_ = json.NewEncoder(w).Encode(tokenResponse{
 		AccessToken: accessToken,
 		TokenType:   "Bearer",
 		ExpiresIn:   900,
@@ -315,7 +315,10 @@ func (h *OAuthHandlers) Consent(w http.ResponseWriter, r *http.Request) {
 	state := r.FormValue("state")
 	scopes := strings.Fields(scopeStr)
 
-	h.consents.StoreConsent(userID, clientID, scopes)
+	if err := h.consents.StoreConsent(userID, clientID, scopes); err != nil {
+		http.Error(w, "server_error", http.StatusInternalServerError)
+		return
+	}
 
 	// Issue auth code and redirect (no PKCE challenge on consent POST — it was carried in the original authorize URL)
 	code, err := h.issueAuthCode(r.Context(), userIDStr, clientID, redirectURI, scopes, "")

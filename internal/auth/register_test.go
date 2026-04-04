@@ -180,7 +180,7 @@ func TestVerifyEmail_Success(t *testing.T) {
 
 	// Create a user
 	u := &user.User{ID: uuid.New(), Email: "user@example.com"}
-	a.users.Create(u)
+	_ = a.users.Create(u)
 
 	// Create a token manually
 	token, _ := a.tokens.CreateEmailVerificationToken(context.Background(), u.ID.String(), time.Hour)
@@ -219,7 +219,7 @@ func TestVerifyEmail_TokenConsumedOnce(t *testing.T) {
 	h := a.handler()
 
 	u := &user.User{ID: uuid.New(), Email: "user@example.com"}
-	a.users.Create(u)
+	_ = a.users.Create(u)
 
 	token, _ := a.tokens.CreateEmailVerificationToken(context.Background(), u.ID.String(), time.Hour)
 

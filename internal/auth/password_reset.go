@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/otaviano/braza-sso/internal/email"
 	"github.com/otaviano/braza-sso/internal/user"
+	"github.com/rs/zerolog/log"
 )
 
 const passwordResetTTL = 1 * time.Hour
@@ -97,7 +98,11 @@ func (h *PasswordResetHandler) ResetRequest(w http.ResponseWriter, r *http.Reque
 	}
 
 	resetURL := fmt.Sprintf("%s/auth/password/reset?token=%s", h.baseURL, token)
-	go h.mailer.SendPasswordReset(u.Email, resetURL)
+	go func() {
+		if err := h.mailer.SendPasswordReset(u.Email, resetURL); err != nil {
+			log.Warn().Err(err).Str("email", u.Email).Msg("failed to send password reset email")
+		}
+	}()
 
 	w.WriteHeader(http.StatusOK)
 }
@@ -157,7 +162,9 @@ func (h *PasswordResetHandler) Reset(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Invalidate all active sessions so stolen refresh tokens are revoked
-	h.tokens.RevokeAllUserSessions(r.Context(), userIDStr)
+	if err := h.tokens.RevokeAllUserSessions(r.Context(), userIDStr); err != nil {
+		log.Warn().Err(err).Str("user_id", userIDStr).Msg("failed to revoke sessions after password reset")
+	}
 
 	writeJSON(w, http.StatusOK, map[string]string{"message": "password updated"})
 }

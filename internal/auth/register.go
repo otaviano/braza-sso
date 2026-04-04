@@ -134,7 +134,11 @@ func (h *RegistrationHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	verifyURL := fmt.Sprintf("%s/auth/verify-email?token=%s", h.baseURL, token)
 	// Fire-and-forget; don't fail registration if email delivery fails
-	go h.mailer.SendVerification(u.Email, verifyURL)
+	go func() {
+		if err := h.mailer.SendVerification(u.Email, verifyURL); err != nil {
+			log.Warn().Err(err).Str("email", u.Email).Msg("failed to send verification email")
+		}
+	}()
 
 	w.WriteHeader(http.StatusCreated)
 }
@@ -195,7 +199,11 @@ func (h *RegistrationHandler) ResendVerification(w http.ResponseWriter, r *http.
 	}
 
 	verifyURL := fmt.Sprintf("%s/auth/verify-email?token=%s", h.baseURL, token)
-	go h.mailer.SendVerification(u.Email, verifyURL)
+	go func() {
+		if err := h.mailer.SendVerification(u.Email, verifyURL); err != nil {
+			log.Warn().Err(err).Str("email", u.Email).Msg("failed to resend verification email")
+		}
+	}()
 
 	w.WriteHeader(http.StatusOK)
 }
@@ -209,5 +217,5 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 func writeJSON(w http.ResponseWriter, status int, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(v)
+	_ = json.NewEncoder(w).Encode(v)
 }

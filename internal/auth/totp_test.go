@@ -164,7 +164,7 @@ func TestEnroll_Success(t *testing.T) {
 	}
 
 	var resp enrollResponse
-	json.NewDecoder(rec.Body).Decode(&resp)
+	_ = json.NewDecoder(rec.Body).Decode(&resp)
 
 	if resp.Secret == "" {
 		t.Error("expected secret in response")

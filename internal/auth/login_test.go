@@ -180,7 +180,7 @@ func TestLogin_Success(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.NewDecoder(rec.Body).Decode(&resp)
+	_ = json.NewDecoder(rec.Body).Decode(&resp)
 	if resp["access_token"] == "" {
 		t.Fatal("expected access_token in response")
 	}
@@ -290,7 +290,7 @@ func TestLogin_MFARequired(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.NewDecoder(rec.Body).Decode(&resp)
+	_ = json.NewDecoder(rec.Body).Decode(&resp)
 	if resp["mfa_required"] != true {
 		t.Error("expected mfa_required=true")
 	}

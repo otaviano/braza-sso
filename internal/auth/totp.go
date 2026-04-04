@@ -320,7 +320,9 @@ func (h *TOTPHandler) Recovery(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "user not found")
 		return
 	}
-	h.users.UpdateTOTP(userID, u.TOTPSecret, false)
+	if err := h.users.UpdateTOTP(userID, u.TOTPSecret, false); err != nil {
+		log.Warn().Err(err).Str("user_id", userID.String()).Msg("failed to disable TOTP after recovery code use")
+	}
 
 	resp := map[string]interface{}{
 		"message":        "recovery code accepted; please re-enroll 2FA",
@@ -334,7 +336,10 @@ func (h *TOTPHandler) Recovery(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	refreshToken := randomToken(32)
-	h.tokens.StoreRefreshToken(r.Context(), refreshToken, userID.String(), refreshTokenTTL)
+	if err := h.tokens.StoreRefreshToken(r.Context(), refreshToken, userID.String(), refreshTokenTTL); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to store refresh token")
+		return
+	}
 	setRefreshCookie(w, refreshToken)
 
 	resp["access_token"] = accessToken
@@ -351,7 +356,10 @@ func (h *TOTPHandler) issueTokenPairForUser(w http.ResponseWriter, r *http.Reque
 	}
 
 	refreshToken := randomToken(32)
-	h.tokens.StoreRefreshToken(r.Context(), refreshToken, u.ID.String(), refreshTokenTTL)
+	if err := h.tokens.StoreRefreshToken(r.Context(), refreshToken, u.ID.String(), refreshTokenTTL); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to store refresh token")
+		return
+	}
 	setRefreshCookie(w, refreshToken)
 
 	writeJSON(w, http.StatusOK, loginResponse{
