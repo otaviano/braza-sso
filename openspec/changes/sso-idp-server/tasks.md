@@ -71,14 +71,14 @@
 
 ## 9. Two-Factor Authentication (TOTP)
 
-- [ ] 9.1 Add `pquerna/otp` dependency
-- [ ] 9.2 Implement `POST /account/2fa/enroll`: generate TOTP secret, return QR code URI + 8 recovery codes
-- [ ] 9.3 Store recovery codes hashed with Argon2id in Cassandra (`user_recovery_codes` table)
-- [ ] 9.4 Implement `POST /account/2fa/confirm`: verify submitted TOTP code, activate 2FA
-- [ ] 9.5 Implement intermediate session token (Redis, 5-minute TTL) issued after credential validation when 2FA is enabled
-- [ ] 9.6 Implement `POST /auth/2fa/verify` endpoint to complete login with TOTP code
-- [ ] 9.7 Implement `POST /auth/2fa/recovery` endpoint for recovery code usage (invalidate used code, prompt re-enrollment)
-- [ ] 9.8 Write unit tests for TOTP enrollment and verification
+- [x] 9.1 Add `pquerna/otp` dependency
+- [x] 9.2 Implement `POST /account/2fa/enroll`: generate TOTP secret, return QR code URI + 8 recovery codes
+- [x] 9.3 Store recovery codes hashed with Argon2id in Cassandra (`user_recovery_codes` table)
+- [x] 9.4 Implement `POST /account/2fa/confirm`: verify submitted TOTP code, activate 2FA
+- [x] 9.5 Implement intermediate session token (Redis, 5-minute TTL) issued after credential validation when 2FA is enabled
+- [x] 9.6 Implement `POST /auth/2fa/verify` endpoint to complete login with TOTP code
+- [x] 9.7 Implement `POST /auth/2fa/recovery` endpoint for recovery code usage (invalidate used code, prompt re-enrollment)
+- [x] 9.8 Write unit tests for TOTP enrollment and verification
 
 ## 10. Rate Limiting
 

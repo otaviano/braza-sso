@@ -18,6 +18,7 @@ import (
 	"github.com/otaviano/braza-sso/internal/config"
 	"github.com/otaviano/braza-sso/internal/db"
 	"github.com/otaviano/braza-sso/internal/email"
+	"github.com/otaviano/braza-sso/internal/middleware"
 	"github.com/otaviano/braza-sso/internal/oauth"
 	"github.com/otaviano/braza-sso/internal/user"
 )
@@ -102,6 +103,17 @@ func main() {
 	pwdResetHandler := auth.NewPasswordResetHandler(userRepo, tokenStore, mailer, cfg.Pepper, cfg.BaseURL)
 	r.Post("/auth/password/reset-request", pwdResetHandler.ResetRequest)
 	r.Post("/auth/password/reset", pwdResetHandler.Reset)
+
+	// TOTP 2FA
+	recoveryCodeRepo := user.NewRecoveryCodeRepository(cassSession)
+	totpHandler := auth.NewTOTPHandler(userRepo, recoveryCodeRepo, tokenStore, tokenSvc, mailer, cfg.Pepper, cfg.JWTIssuer)
+	r.Post("/auth/2fa/verify", totpHandler.Verify)
+	r.Post("/auth/2fa/recovery", totpHandler.Recovery)
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.RequireAuth(tokenSvc))
+		r.Post("/account/2fa/enroll", totpHandler.Enroll)
+		r.Post("/account/2fa/confirm", totpHandler.Confirm)
+	})
 
 	// HTTP server with graceful shutdown
 	srv := &http.Server{
