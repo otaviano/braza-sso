@@ -89,12 +89,12 @@ func Load() (*Config, error) {
 	redisDB, _ := strconv.Atoi(optional("REDIS_DB", "0"))
 	cfg.RedisDB = redisDB
 
-	cfg.SMTPHost = required("SMTP_HOST")
+	cfg.SMTPHost = optional("SMTP_HOST", "localhost")
 	smtpPort, _ := strconv.Atoi(optional("SMTP_PORT", "587"))
 	cfg.SMTPPort = smtpPort
-	cfg.SMTPUser = required("SMTP_USER")
-	cfg.SMTPPass = required("SMTP_PASS")
-	cfg.SMTPFrom = required("SMTP_FROM")
+	cfg.SMTPUser = optional("SMTP_USER", "")
+	cfg.SMTPPass = optional("SMTP_PASS", "")
+	cfg.SMTPFrom = optional("SMTP_FROM", "noreply@localhost")
 
 	cfg.GoogleClientID = optional("GOOGLE_CLIENT_ID", "")
 	cfg.GoogleClientSecret = optional("GOOGLE_CLIENT_SECRET", "")

@@ -26,7 +26,10 @@ func NewSMTPSender(host string, port int, user, pass, from string) *SMTPSender {
 }
 
 func (s *SMTPSender) send(to, subject, body string) error {
-	auth := smtp.PlainAuth("", s.user, s.pass, s.host)
+	var auth smtp.Auth
+	if s.user != "" {
+		auth = smtp.PlainAuth("", s.user, s.pass, s.host)
+	}
 	msg := fmt.Sprintf("From: %s\r\nTo: %s\r\nSubject: %s\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n%s",
 		s.from, to, subject, body)
 	addr := fmt.Sprintf("%s:%d", s.host, s.port)
