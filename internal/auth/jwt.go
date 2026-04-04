@@ -5,6 +5,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -64,6 +65,11 @@ func NewTokenService(privateKeyPath, issuer string, accessTTL time.Duration) (*T
 // IssueAccessToken creates a signed RS256 JWT access token.
 func (ts *TokenService) IssueAccessToken(userID, email string, emailVerified bool, audience string) (string, error) {
 	now := time.Now()
+	jti, err := newJTI()
+	if err != nil {
+		return "", fmt.Errorf("IssueAccessToken: %w", err)
+	}
+
 	claims := Claims{
 		Email:         email,
 		EmailVerified: emailVerified,
@@ -73,7 +79,7 @@ func (ts *TokenService) IssueAccessToken(userID, email string, emailVerified boo
 			Audience:  jwt.ClaimStrings{audience},
 			ExpiresAt: jwt.NewNumericDate(now.Add(ts.accessTTL)),
 			IssuedAt:  jwt.NewNumericDate(now),
-			ID:        newJTI(),
+			ID:        jti,
 		},
 	}
 
@@ -114,10 +120,12 @@ func (ts *TokenService) PublicKeyJWK() map[string]interface{} {
 	}
 }
 
-func newJTI() string {
+func newJTI() (string, error) {
 	b := make([]byte, 16)
-	rand.Read(b)
-	return fmt.Sprintf("%x", b)
+	if _, err := rand.Read(b); err != nil {
+		return "", fmt.Errorf("generating JTI: %w", err)
+	}
+	return hex.EncodeToString(b), nil
 }
 
 // GenerateRSAKeyPair is a helper for the keygen script — not used in production path.

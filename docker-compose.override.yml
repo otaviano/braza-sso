@@ -1,0 +1,33 @@
+# Local development overrides — applied automatically by `docker compose up`.
+# Do NOT commit secrets or local paths into this file.
+
+services:
+
+  # Use HTTP-only Caddyfile for local dev (no domain / TLS required).
+  caddy:
+    volumes:
+      - ./Caddyfile.local:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    # Override ALL ports declared in docker-compose.yml to avoid port 80/443 conflicts.
+    ports: !override
+      - "8000:80"
+
+  # Run schema migrations against Cassandra after it becomes healthy.
+  cassandra-init:
+    image: cassandra:4.1
+    depends_on:
+      cassandra:
+        condition: service_healthy
+    volumes:
+      - ./db/schema.cql:/schema.cql:ro
+    entrypoint: >
+      sh -c "cqlsh cassandra -f /schema.cql && echo 'Schema applied.'"
+    networks:
+      - internal
+    restart: "no"
+
+  # Expose Cassandra native transport for local clients (cqlsh, TablePlus, etc.)
+  cassandra:
+    ports:
+      - "9042:9042"

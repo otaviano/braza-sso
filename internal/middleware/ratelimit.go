@@ -1,3 +1,5 @@
+// Package middleware provides HTTP middleware for the Braza SSO API,
+// including JWT authentication enforcement and Redis-backed rate limiting.
 package middleware
 
 import (
@@ -8,6 +10,7 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	"github.com/rs/zerolog/log"
 )
 
 // SlidingWindowLimiter implements a Redis INCR+EXPIRE sliding window rate limiter.
@@ -26,7 +29,8 @@ func (l *SlidingWindowLimiter) Allow(ctx context.Context, key string, limit int,
 	incr := pipe.Incr(ctx, key)
 	pipe.Expire(ctx, key, window)
 	if _, err := pipe.Exec(ctx); err != nil {
-		// Fail open — don't block traffic on Redis errors
+		// Fail open — don't block traffic on Redis errors, but log them.
+		log.Warn().Err(err).Str("key", key).Msg("rate limiter: Redis error, failing open")
 		return true, 0, err
 	}
 	count := incr.Val()

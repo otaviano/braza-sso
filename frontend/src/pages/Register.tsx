@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { api } from '../api';
+import { card, title, form, input, btn, link, errorStyle } from '../styles';
 
 interface Props { onLogin: () => void; }
 
-function strengthLabel(pw: string): { label: string; color: string } {
+function strengthLabel(password: string): { label: string; color: string } {
   let score = 0;
-  if (pw.length >= 12) score++;
-  if (/[A-Z]/.test(pw)) score++;
-  if (/[0-9]/.test(pw)) score++;
-  if (/[^a-zA-Z0-9]/.test(pw)) score++;
+  if (password.length >= 12) score++;
+  if (/[A-Z]/.test(password)) score++;
+  if (/[0-9]/.test(password)) score++;
+  if (/[^a-zA-Z0-9]/.test(password)) score++;
   if (score <= 1) return { label: 'Weak', color: '#c00' };
   if (score === 2) return { label: 'Fair', color: '#f90' };
   if (score === 3) return { label: 'Good', color: '#090' };
@@ -30,20 +31,22 @@ export default function Register({ onLogin }: Props) {
     try {
       await api.register(email, password);
       setDone(true);
-    } catch (err: any) {
-      setError(err.message ?? 'Registration failed');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Registration failed');
     } finally {
       setLoading(false);
     }
   }
 
-  if (done) return (
-    <div style={card}>
-      <h1 style={title}>Check your email</h1>
-      <p style={{ textAlign: 'center', color: '#555' }}>We sent a verification link to <strong>{email}</strong>.</p>
-      <button style={{ ...btn, marginTop: '1.5rem' }} onClick={onLogin}>Back to sign in</button>
-    </div>
-  );
+  if (done) {
+    return (
+      <div style={card}>
+        <h1 style={title}>Check your email</h1>
+        <p style={{ textAlign: 'center', color: '#555' }}>We sent a verification link to <strong>{email}</strong>.</p>
+        <button style={{ ...btn, marginTop: '1.5rem' }} onClick={onLogin}>Back to sign in</button>
+      </div>
+    );
+  }
 
   return (
     <div style={card}>
@@ -51,7 +54,7 @@ export default function Register({ onLogin }: Props) {
       <form onSubmit={handleSubmit} style={form}>
         <input style={input} type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required />
         <div>
-          <input style={input} type="password" placeholder="Password (min 12 chars)" value={password} onChange={e => setPassword(e.target.value)} required />
+          <input style={{ ...input, width: '100%', boxSizing: 'border-box' }} type="password" placeholder="Password (min 12 chars)" value={password} onChange={e => setPassword(e.target.value)} required />
           {password && <span style={{ fontSize: '0.8rem', color: strength.color }}>{strength.label}</span>}
         </div>
         {error && <p style={errorStyle}>{error}</p>}
@@ -63,11 +66,3 @@ export default function Register({ onLogin }: Props) {
     </div>
   );
 }
-
-const card: React.CSSProperties = { background: '#fff', borderRadius: 12, padding: '2rem', width: 360, boxShadow: '0 2px 16px rgba(0,0,0,0.1)' };
-const title: React.CSSProperties = { marginBottom: '1.5rem', fontSize: '1.5rem', textAlign: 'center' };
-const form: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '0.75rem' };
-const input: React.CSSProperties = { padding: '0.625rem', borderRadius: 6, border: '1px solid #ddd', fontSize: '1rem', width: '100%', boxSizing: 'border-box' };
-const btn: React.CSSProperties = { padding: '0.75rem', background: '#0066ff', color: '#fff', border: 'none', borderRadius: 6, fontSize: '1rem', cursor: 'pointer' };
-const link: React.CSSProperties = { background: 'none', border: 'none', color: '#0066ff', cursor: 'pointer', fontSize: '0.875rem' };
-const errorStyle: React.CSSProperties = { color: '#c00', fontSize: '0.875rem' };

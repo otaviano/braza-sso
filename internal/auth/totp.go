@@ -10,6 +10,7 @@ import (
 	"github.com/otaviano/braza-sso/internal/email"
 	"github.com/otaviano/braza-sso/internal/user"
 	"github.com/pquerna/otp/totp"
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -309,6 +310,10 @@ func (h *TOTPHandler) Recovery(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Warn().
+		Str("user_id", userID.String()).
+		Msg("TOTP recovery code used; TOTP disabled pending re-enrollment")
+
 	// Disable TOTP to prompt re-enrollment
 	u, err := h.users.FindByID(userID)
 	if err != nil {
@@ -330,16 +335,7 @@ func (h *TOTPHandler) Recovery(w http.ResponseWriter, r *http.Request) {
 	}
 	refreshToken := randomToken(32)
 	h.tokens.StoreRefreshToken(r.Context(), refreshToken, userID.String(), refreshTokenTTL)
-
-	http.SetCookie(w, &http.Cookie{
-		Name:     refreshCookieName,
-		Value:    refreshToken,
-		Path:     "/auth/token/refresh",
-		MaxAge:   int(refreshTokenTTL.Seconds()),
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteStrictMode,
-	})
+	setRefreshCookie(w, refreshToken)
 
 	resp["access_token"] = accessToken
 	resp["token_type"] = "Bearer"
@@ -356,16 +352,7 @@ func (h *TOTPHandler) issueTokenPairForUser(w http.ResponseWriter, r *http.Reque
 
 	refreshToken := randomToken(32)
 	h.tokens.StoreRefreshToken(r.Context(), refreshToken, u.ID.String(), refreshTokenTTL)
-
-	http.SetCookie(w, &http.Cookie{
-		Name:     refreshCookieName,
-		Value:    refreshToken,
-		Path:     "/auth/token/refresh",
-		MaxAge:   int(refreshTokenTTL.Seconds()),
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteStrictMode,
-	})
+	setRefreshCookie(w, refreshToken)
 
 	writeJSON(w, http.StatusOK, loginResponse{
 		AccessToken: accessToken,

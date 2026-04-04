@@ -17,6 +17,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      mailpit:
+        condition: service_started
     networks:
       - internal
 
@@ -68,6 +70,15 @@ services:
       timeout: 10s
       retries: 10
       start_period: 60s
+    networks:
+      - internal
+
+  # ─── Mailpit (local SMTP + web UI) ───────────────────────────────────────
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "8025:8025"
     networks:
       - internal
 

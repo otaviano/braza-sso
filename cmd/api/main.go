@@ -111,18 +111,7 @@ func main() {
 	r.Post("/auth/2fa/verify", totpHandler.Verify)
 	r.Post("/auth/2fa/recovery", totpHandler.Recovery)
 
-	// Logout (Phase 12)
-	logoutHandler := auth.NewLogoutHandler(tokenStore, tokenSvc)
-	r.Post("/auth/logout", logoutHandler.Logout)
-	r.Post("/auth/backchannel-logout", auth.BackChannelLogoutReceiver(tokenStore))
-	r.Group(func(r chi.Router) {
-		r.Use(middleware.RequireAuth(tokenSvc))
-		r.Post("/auth/logout/all", logoutHandler.RevokeAll)
-		r.Post("/account/2fa/enroll", totpHandler.Enroll)
-		r.Post("/account/2fa/confirm", totpHandler.Confirm)
-	})
-
-	// OAuth2/OIDC (Phase 11)
+	// OAuth2/OIDC (Phase 11) — declared before logout so notifier can reference it
 	oauthClients := oauth.NewClientRepository(cassSession)
 	oauthConsents := oauth.NewConsentRepository(cassSession)
 	oauthHandlers := oauth.NewOAuthHandlers(oauthClients, oauthConsents, userRepo, redisClient, tokenSvc, cfg.JWTIssuer, cfg.BaseURL)
@@ -135,11 +124,26 @@ func main() {
 		r.Get("/oauth/userinfo", oauthHandlers.Userinfo)
 	})
 
+	// Logout (Phase 12)
+	backChannelNotifier := oauth.NewBackChannelLogoutService(oauthClients, oauthConsents)
+	logoutHandler := auth.NewLogoutHandler(tokenStore, tokenSvc, backChannelNotifier)
+	r.Post("/auth/logout", logoutHandler.Logout)
+	r.Post("/auth/backchannel-logout", auth.BackChannelLogoutReceiver(tokenStore))
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.RequireAuth(tokenSvc))
+		r.Post("/auth/logout/all", logoutHandler.RevokeAll)
+		r.Post("/account/2fa/enroll", totpHandler.Enroll)
+		r.Post("/account/2fa/confirm", totpHandler.Confirm)
+	})
+
 	// Google federation (Phase 13)
 	if cfg.GoogleClientID != "" {
 		federatedIdentityRepo := user.NewFederatedIdentityRepository(cassSession)
-		fedHandler := auth.NewFederationHandler(cfg.GoogleClientID, cfg.GoogleClientSecret, cfg.BaseURL,
+		fedHandler, err := auth.NewFederationHandler(cfg.GoogleClientID, cfg.GoogleClientSecret, cfg.BaseURL,
 			userRepo, federatedIdentityRepo, tokenStore, tokenSvc, cfg.Pepper, cfg.JWTIssuer)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to initialize Google federation")
+		}
 		r.Get("/auth/federation/google", fedHandler.GoogleRedirect)
 		r.Get("/auth/federation/google/callback", fedHandler.GoogleCallback)
 	}

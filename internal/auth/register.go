@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/otaviano/braza-sso/internal/email"
 	"github.com/otaviano/braza-sso/internal/user"
+	"github.com/rs/zerolog/log"
 )
 
 const emailVerifyTTL = 24 * time.Hour
@@ -119,6 +120,7 @@ func (h *RegistrationHandler) Register(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusCreated)
 			return
 		}
+		log.Error().Err(err).Str("email", u.Email).Msg("user creation failed")
 		writeError(w, http.StatusInternalServerError, "failed to create account")
 		return
 	}

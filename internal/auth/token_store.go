@@ -166,8 +166,13 @@ func MaxLoginAttempts() int { return maxLoginAttempts }
 // LockoutDuration returns the configured lockout period.
 func LockoutDuration() time.Duration { return lockoutDuration }
 
+// randomToken generates n cryptographically random bytes and returns them
+// base64url-encoded. rand.Read cannot fail on Go 1.20+ (panics internally),
+// but we check the error to satisfy the error-checking convention.
 func randomToken(n int) string {
 	b := make([]byte, n)
-	rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		panic(fmt.Sprintf("crypto/rand.Read: %v", err))
+	}
 	return base64.RawURLEncoding.EncodeToString(b)
 }

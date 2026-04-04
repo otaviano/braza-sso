@@ -3,6 +3,7 @@ package oauth
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -64,6 +65,8 @@ func (h *OAuthHandlers) Authorize(w http.ResponseWriter, r *http.Request) {
 	responseType := q.Get("response_type")
 	scopeStr := q.Get("scope")
 	state := q.Get("state")
+	codeChallenge := q.Get("code_challenge")
+	codeChallengeMethod := q.Get("code_challenge_method")
 
 	if responseType != "code" {
 		http.Error(w, "unsupported_response_type", http.StatusBadRequest)
@@ -107,8 +110,14 @@ func (h *OAuthHandlers) Authorize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate PKCE method when a challenge is provided.
+	if codeChallenge != "" && codeChallengeMethod != "S256" {
+		http.Error(w, "invalid_request: only S256 code_challenge_method is supported", http.StatusBadRequest)
+		return
+	}
+
 	// Issue authorization code
-	code, err := h.issueAuthCode(r.Context(), userIDStr, clientID, redirectURI, scopes)
+	code, err := h.issueAuthCode(r.Context(), userIDStr, clientID, redirectURI, scopes, codeChallenge)
 	if err != nil {
 		http.Error(w, "server_error", http.StatusInternalServerError)
 		return
@@ -154,6 +163,7 @@ func (h *OAuthHandlers) handleAuthCode(w http.ResponseWriter, r *http.Request) {
 	code := r.FormValue("code")
 	redirectURI := r.FormValue("redirect_uri")
 	clientID := r.FormValue("client_id")
+	codeVerifier := r.FormValue("code_verifier")
 
 	// Consume the auth code from Redis
 	codeKey := "oauth_code:" + code
@@ -163,7 +173,7 @@ func (h *OAuthHandlers) handleAuthCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// val is JSON: {user_id, client_id, redirect_uri, scopes}
+	// val is JSON: {user_id, client_id, redirect_uri, scopes, code_challenge}
 	var meta authCodeMeta
 	if err := json.Unmarshal([]byte(val), &meta); err != nil {
 		oauthError(w, "server_error", http.StatusInternalServerError)
@@ -173,6 +183,18 @@ func (h *OAuthHandlers) handleAuthCode(w http.ResponseWriter, r *http.Request) {
 	if meta.ClientID != clientID || meta.RedirectURI != redirectURI {
 		oauthError(w, "invalid_grant", http.StatusBadRequest)
 		return
+	}
+
+	// Verify PKCE when the authorization request included a code_challenge.
+	if meta.CodeChallenge != "" {
+		if codeVerifier == "" {
+			oauthError(w, "invalid_grant", http.StatusBadRequest)
+			return
+		}
+		if !verifyPKCE(codeVerifier, meta.CodeChallenge) {
+			oauthError(w, "invalid_grant", http.StatusBadRequest)
+			return
+		}
 	}
 
 	u, err := h.users.FindByID(uuid.MustParse(meta.UserID))
@@ -267,8 +289,9 @@ func (h *OAuthHandlers) Discovery(w http.ResponseWriter, r *http.Request) {
 		"subject_types_supported":               []string{"public"},
 		"id_token_signing_alg_values_supported": []string{"RS256"},
 		"scopes_supported":                      []string{"openid", "email", "profile"},
-		"token_endpoint_auth_methods_supported": []string{"client_secret_post"},
-		"claims_supported":                      []string{"sub", "email", "email_verified", "iss", "aud", "exp", "iat"},
+		"token_endpoint_auth_methods_supported":  []string{"client_secret_post"},
+		"claims_supported":                       []string{"sub", "email", "email_verified", "iss", "aud", "exp", "iat"},
+		"code_challenge_methods_supported":        []string{"S256"},
 	})
 }
 
@@ -294,8 +317,8 @@ func (h *OAuthHandlers) Consent(w http.ResponseWriter, r *http.Request) {
 
 	h.consents.StoreConsent(userID, clientID, scopes)
 
-	// Issue auth code and redirect
-	code, err := h.issueAuthCode(r.Context(), userIDStr, clientID, redirectURI, scopes)
+	// Issue auth code and redirect (no PKCE challenge on consent POST — it was carried in the original authorize URL)
+	code, err := h.issueAuthCode(r.Context(), userIDStr, clientID, redirectURI, scopes, "")
 	if err != nil {
 		http.Error(w, "server_error", http.StatusInternalServerError)
 		return
@@ -312,15 +335,22 @@ func (h *OAuthHandlers) Consent(w http.ResponseWriter, r *http.Request) {
 }
 
 type authCodeMeta struct {
-	UserID      string   `json:"user_id"`
-	ClientID    string   `json:"client_id"`
-	RedirectURI string   `json:"redirect_uri"`
-	Scopes      []string `json:"scopes"`
+	UserID        string   `json:"user_id"`
+	ClientID      string   `json:"client_id"`
+	RedirectURI   string   `json:"redirect_uri"`
+	Scopes        []string `json:"scopes"`
+	CodeChallenge string   `json:"code_challenge,omitempty"` // PKCE S256 challenge
 }
 
-func (h *OAuthHandlers) issueAuthCode(ctx context.Context, userID, clientID, redirectURI string, scopes []string) (string, error) {
+func (h *OAuthHandlers) issueAuthCode(ctx context.Context, userID, clientID, redirectURI string, scopes []string, codeChallenge string) (string, error) {
 	code := randomCode()
-	meta := authCodeMeta{UserID: userID, ClientID: clientID, RedirectURI: redirectURI, Scopes: scopes}
+	meta := authCodeMeta{
+		UserID:        userID,
+		ClientID:      clientID,
+		RedirectURI:   redirectURI,
+		Scopes:        scopes,
+		CodeChallenge: codeChallenge,
+	}
 	data, err := json.Marshal(meta)
 	if err != nil {
 		return "", err
@@ -330,8 +360,17 @@ func (h *OAuthHandlers) issueAuthCode(ctx context.Context, userID, clientID, red
 
 func randomCode() string {
 	b := make([]byte, 24)
-	rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		panic(fmt.Sprintf("crypto/rand.Read: %v", err))
+	}
 	return base64.RawURLEncoding.EncodeToString(b)
+}
+
+// verifyPKCE checks that SHA-256(verifier) == challenge (S256 method, RFC 7636).
+func verifyPKCE(verifier, challenge string) bool {
+	digest := sha256.Sum256([]byte(verifier))
+	computed := base64.RawURLEncoding.EncodeToString(digest[:])
+	return computed == challenge
 }
 
 func validRedirectURI(allowed []string, uri string) bool {

@@ -4,21 +4,18 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
 
+	gooidc "github.com/coreos/go-oidc/v3/oidc"
 	"github.com/google/uuid"
 	"github.com/otaviano/braza-sso/internal/user"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 )
 
-const (
-	stateTokenTTL   = 10 * time.Minute
-	prefixOAuthState = "oauth_state:"
-)
+const stateTokenTTL = 10 * time.Minute
 
 // FederationStore manages short-lived OAuth state tokens in Redis.
 type FederationStore interface {
@@ -41,6 +38,7 @@ type FederationIdentityRepository interface {
 // FederationHandler handles Google OAuth2 federation.
 type FederationHandler struct {
 	googleCfg    *oauth2.Config
+	oidcVerifier *gooidc.IDTokenVerifier
 	users        FederationUserRepository
 	identities   FederationIdentityRepository
 	tokenStore   FederationStore
@@ -56,28 +54,38 @@ func NewFederationHandler(
 	tokenStore *TokenStore,
 	jwt *TokenService,
 	pepper, jwtIssuer string,
-) *FederationHandler {
+) (*FederationHandler, error) {
 	cfg := &oauth2.Config{
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
 		RedirectURL:  baseURL + "/auth/federation/google/callback",
-		Scopes:       []string{"openid", "email", "profile"},
+		Scopes:       []string{gooidc.ScopeOpenID, "email", "profile"},
 		Endpoint:     google.Endpoint,
 	}
-	return &FederationHandler{
-		googleCfg:  cfg,
-		users:      users,
-		identities: identities,
-		tokenStore: tokenStore,
-		jwt:        jwt,
-		pepper:     pepper,
-		jwtIssuer:  jwtIssuer,
+
+	provider, err := gooidc.NewProvider(context.Background(), "https://accounts.google.com")
+	if err != nil {
+		return nil, fmt.Errorf("creating OIDC provider: %w", err)
 	}
+
+	verifier := provider.Verifier(&gooidc.Config{ClientID: clientID})
+
+	return &FederationHandler{
+		googleCfg:    cfg,
+		oidcVerifier: verifier,
+		users:        users,
+		identities:   identities,
+		tokenStore:   tokenStore,
+		jwt:          jwt,
+		pepper:       pepper,
+		jwtIssuer:    jwtIssuer,
+	}, nil
 }
 
 // NewFederationHandlerWithDeps creates a handler with injected dependencies (for testing).
 func NewFederationHandlerWithDeps(
 	googleCfg *oauth2.Config,
+	oidcVerifier *gooidc.IDTokenVerifier,
 	users FederationUserRepository,
 	identities FederationIdentityRepository,
 	tokenStore FederationStore,
@@ -85,13 +93,14 @@ func NewFederationHandlerWithDeps(
 	pepper, jwtIssuer string,
 ) *FederationHandler {
 	return &FederationHandler{
-		googleCfg:  googleCfg,
-		users:      users,
-		identities: identities,
-		tokenStore: tokenStore,
-		jwt:        jwt,
-		pepper:     pepper,
-		jwtIssuer:  jwtIssuer,
+		googleCfg:    googleCfg,
+		oidcVerifier: oidcVerifier,
+		users:        users,
+		identities:   identities,
+		tokenStore:   tokenStore,
+		jwt:          jwt,
+		pepper:       pepper,
+		jwtIssuer:    jwtIssuer,
 	}
 }
 
@@ -100,8 +109,8 @@ func (h *FederationHandler) GoogleRedirect(w http.ResponseWriter, r *http.Reques
 	state := randomStateToken()
 	returnTo := r.URL.Query().Get("return_to")
 	h.tokenStore.SetState(r.Context(), state, returnTo)
-	url := h.googleCfg.AuthCodeURL(state, oauth2.AccessTypeOnline)
-	http.Redirect(w, r, url, http.StatusFound)
+	redirectURL := h.googleCfg.AuthCodeURL(state, oauth2.AccessTypeOnline)
+	http.Redirect(w, r, redirectURL, http.StatusFound)
 }
 
 // GoogleCallback handles GET /auth/federation/google/callback.
@@ -120,35 +129,42 @@ func (h *FederationHandler) GoogleCallback(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	info, err := fetchGoogleUserInfo(r.Context(), h.googleCfg, token)
-	if err != nil {
-		http.Error(w, `{"error":"failed to fetch user info"}`, http.StatusInternalServerError)
+	// Verify the id_token JWT signature and claims before trusting any identity data.
+	rawIDToken, ok := token.Extra("id_token").(string)
+	if !ok || rawIDToken == "" {
+		http.Error(w, `{"error":"id_token missing from response"}`, http.StatusBadRequest)
 		return
 	}
 
-	// Link or create account
-	u, err := h.users.FindByEmail(info.Email)
+	idToken, err := h.oidcVerifier.Verify(r.Context(), rawIDToken)
 	if err != nil {
-		// Auto-create account — no password (federated only)
-		u = &user.User{
-			ID:            uuid.New(),
-			Email:         info.Email,
-			EmailVerified: info.EmailVerified,
-		}
-		if err := h.users.Create(u); err != nil && err != user.ErrEmailTaken {
-			http.Error(w, `{"error":"account creation failed"}`, http.StatusInternalServerError)
-			return
-		}
-		if err == user.ErrEmailTaken {
-			// Re-fetch
-			u, _ = h.users.FindByEmail(info.Email)
-		}
+		http.Error(w, `{"error":"id_token verification failed"}`, http.StatusUnauthorized)
+		return
 	}
 
-	// Store federated identity record
-	h.identities.Upsert(u.ID, "google", info.Sub, info.Email)
+	var claims struct {
+		Sub           string `json:"sub"`
+		Email         string `json:"email"`
+		EmailVerified bool   `json:"email_verified"`
+	}
+	if err := idToken.Claims(&claims); err != nil {
+		http.Error(w, `{"error":"failed to parse id_token claims"}`, http.StatusInternalServerError)
+		return
+	}
 
-	// Issue tokens
+	if claims.Email == "" {
+		http.Error(w, `{"error":"email missing from id_token"}`, http.StatusBadRequest)
+		return
+	}
+
+	u, err := h.findOrCreateUser(r.Context(), claims.Sub, claims.Email, claims.EmailVerified)
+	if err != nil {
+		http.Error(w, `{"error":"account creation failed"}`, http.StatusInternalServerError)
+		return
+	}
+
+	h.identities.Upsert(u.ID, "google", claims.Sub, claims.Email)
+
 	accessToken, err := h.jwt.IssueAccessToken(u.ID.String(), u.Email, u.EmailVerified, h.jwtIssuer)
 	if err != nil {
 		http.Error(w, `{"error":"token issuance failed"}`, http.StatusInternalServerError)
@@ -157,16 +173,7 @@ func (h *FederationHandler) GoogleCallback(w http.ResponseWriter, r *http.Reques
 
 	refreshToken := randomToken(32)
 	h.tokenStore.StoreRefreshToken(r.Context(), refreshToken, u.ID.String(), refreshTokenTTL)
-
-	http.SetCookie(w, &http.Cookie{
-		Name:     refreshCookieName,
-		Value:    refreshToken,
-		Path:     "/auth/token/refresh",
-		MaxAge:   int(refreshTokenTTL.Seconds()),
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteStrictMode,
-	})
+	setRefreshCookie(w, refreshToken)
 
 	writeJSON(w, http.StatusOK, loginResponse{
 		AccessToken: accessToken,
@@ -175,32 +182,34 @@ func (h *FederationHandler) GoogleCallback(w http.ResponseWriter, r *http.Reques
 	})
 }
 
-type googleUserInfo struct {
-	Sub           string `json:"sub"`
-	Email         string `json:"email"`
-	EmailVerified bool   `json:"email_verified"`
-	Name          string `json:"name"`
-}
+func (h *FederationHandler) findOrCreateUser(ctx context.Context, sub, email string, emailVerified bool) (*user.User, error) {
+	existing, err := h.users.FindByEmail(email)
+	if err == nil {
+		return existing, nil
+	}
 
-func fetchGoogleUserInfo(ctx context.Context, cfg *oauth2.Config, token *oauth2.Token) (*googleUserInfo, error) {
-	client := cfg.Client(ctx, token)
-	resp, err := client.Get("https://openidconnect.googleapis.com/v1/userinfo")
-	if err != nil {
-		return nil, err
+	newUser := &user.User{
+		ID:            uuid.New(),
+		Email:         email,
+		EmailVerified: emailVerified,
 	}
-	defer resp.Body.Close()
-	var info googleUserInfo
-	if err := json.NewDecoder(resp.Body).Decode(&info); err != nil {
-		return nil, err
+
+	if createErr := h.users.Create(newUser); createErr != nil && createErr != user.ErrEmailTaken {
+		return nil, createErr
 	}
-	if info.Email == "" {
-		return nil, fmt.Errorf("empty email from Google")
+
+	// Race condition: another request created the user — re-fetch.
+	if err == user.ErrEmailTaken {
+		return h.users.FindByEmail(email)
 	}
-	return &info, nil
+
+	return newUser, nil
 }
 
 func randomStateToken() string {
 	b := make([]byte, 16)
-	rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		panic(fmt.Sprintf("crypto/rand.Read: %v", err))
+	}
 	return base64.RawURLEncoding.EncodeToString(b)
 }

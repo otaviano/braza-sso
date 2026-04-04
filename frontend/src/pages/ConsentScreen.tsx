@@ -7,31 +7,25 @@ export default function ConsentScreen() {
   const scopes = scope.split(' ');
   const [loading, setLoading] = useState(false);
 
-  function handleAllow() {
+  function submitConsentForm(approved: boolean) {
     setLoading(true);
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = '/api/oauth/consent';
-    for (const [k, v] of params.entries()) {
-      const i = document.createElement('input');
-      i.type = 'hidden'; i.name = k; i.value = v;
-      form.appendChild(i);
+    const consentForm = document.createElement('form');
+    consentForm.method = 'POST';
+    consentForm.action = '/api/oauth/consent';
+    for (const [key, value] of params.entries()) {
+      const hiddenInput = document.createElement('input');
+      hiddenInput.type = 'hidden';
+      hiddenInput.name = key;
+      hiddenInput.value = value;
+      consentForm.appendChild(hiddenInput);
     }
-    document.body.appendChild(form);
-    form.submit();
-  }
-
-  function handleDeny() {
-    const redirect = params.get('redirect_uri');
-    const state = params.get('state');
-    if (redirect) {
-      const url = new URL(redirect);
-      url.searchParams.set('error', 'access_denied');
-      if (state) url.searchParams.set('state', state);
-      window.location.href = url.toString();
-    } else {
-      window.location.href = '/';
-    }
+    const approvedInput = document.createElement('input');
+    approvedInput.type = 'hidden';
+    approvedInput.name = 'approved';
+    approvedInput.value = String(approved);
+    consentForm.appendChild(approvedInput);
+    document.body.appendChild(consentForm);
+    consentForm.submit();
   }
 
   return (
@@ -45,8 +39,8 @@ export default function ConsentScreen() {
         </ul>
       </div>
       <div style={{ display: 'flex', gap: '0.75rem' }}>
-        <button style={denyBtn} onClick={handleDeny} disabled={loading}>Deny</button>
-        <button style={allowBtn} onClick={handleAllow} disabled={loading}>{loading ? 'Authorizing…' : 'Allow'}</button>
+        <button style={denyBtn} onClick={() => submitConsentForm(false)} disabled={loading}>Deny</button>
+        <button style={allowBtn} onClick={() => submitConsentForm(true)} disabled={loading}>{loading ? 'Authorizing…' : 'Allow'}</button>
       </div>
     </div>
   );
