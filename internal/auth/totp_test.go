@@ -299,7 +299,7 @@ func TestRecovery_Success(t *testing.T) {
 	h.Enroll(enrollRec, enrollReq)
 
 	var enrollResp enrollResponse
-	json.NewDecoder(enrollRec.Body).Decode(&enrollResp)
+	_ = json.NewDecoder(enrollRec.Body).Decode(&enrollResp)
 	plainCode := enrollResp.RecoveryCodes[0]
 
 	store.mfaSessions["mfa-recovery-session"] = u.ID.String()

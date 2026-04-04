@@ -268,7 +268,7 @@ func (h *OAuthHandlers) Userinfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"sub":            u.ID.String(),
 		"email":          u.Email,
 		"email_verified": u.EmailVerified,
@@ -279,7 +279,7 @@ func (h *OAuthHandlers) Userinfo(w http.ResponseWriter, r *http.Request) {
 func (h *OAuthHandlers) Discovery(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "public, max-age=86400")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"issuer":                                h.issuer,
 		"authorization_endpoint":                h.baseURL + "/oauth/authorize",
 		"token_endpoint":                        h.baseURL + "/oauth/token",
@@ -388,5 +388,5 @@ func validRedirectURI(allowed []string, uri string) bool {
 func oauthError(w http.ResponseWriter, errCode string, status int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(map[string]string{"error": errCode})
+	_ = json.NewEncoder(w).Encode(map[string]string{"error": errCode})
 }
