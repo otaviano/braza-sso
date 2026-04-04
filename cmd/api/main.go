@@ -87,21 +87,22 @@ func main() {
 	userRepo := user.NewRepository(cassSession)
 	tokenStore := auth.NewTokenStore(redisClient)
 	mailer := email.NewSMTPSender(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPass, cfg.SMTPFrom)
+	rl := middleware.NewSlidingWindowLimiter(redisClient)
 
 	// Registration & email verification
 	regHandler := auth.NewRegistrationHandler(userRepo, tokenStore, mailer, cfg.Pepper, cfg.BaseURL)
-	r.Post("/auth/register", regHandler.Register)
+	r.With(rl.PerIP(5, 10*time.Minute)).Post("/auth/register", regHandler.Register)
 	r.Get("/auth/verify-email", regHandler.VerifyEmail)
 	r.Post("/auth/resend-verification", regHandler.ResendVerification)
 
 	// Login & token refresh
 	loginHandler := auth.NewLoginHandler(userRepo, tokenStore, tokenSvc, mailer, cfg.Pepper, cfg.BaseURL, cfg.JWTIssuer)
-	r.Post("/auth/login", loginHandler.Login)
+	r.With(rl.PerIP(20, time.Minute)).Post("/auth/login", loginHandler.Login)
 	r.Post("/auth/token/refresh", loginHandler.Refresh)
 
-	// Password reset
+	// Password reset (silent drop on rate limit)
 	pwdResetHandler := auth.NewPasswordResetHandler(userRepo, tokenStore, mailer, cfg.Pepper, cfg.BaseURL)
-	r.Post("/auth/password/reset-request", pwdResetHandler.ResetRequest)
+	r.With(rl.PerEmailSilent(3, 15*time.Minute, "email")).Post("/auth/password/reset-request", pwdResetHandler.ResetRequest)
 	r.Post("/auth/password/reset", pwdResetHandler.Reset)
 
 	// TOTP 2FA
@@ -109,11 +110,39 @@ func main() {
 	totpHandler := auth.NewTOTPHandler(userRepo, recoveryCodeRepo, tokenStore, tokenSvc, mailer, cfg.Pepper, cfg.JWTIssuer)
 	r.Post("/auth/2fa/verify", totpHandler.Verify)
 	r.Post("/auth/2fa/recovery", totpHandler.Recovery)
+
+	// Logout (Phase 12)
+	logoutHandler := auth.NewLogoutHandler(tokenStore, tokenSvc)
+	r.Post("/auth/logout", logoutHandler.Logout)
+	r.Post("/auth/backchannel-logout", auth.BackChannelLogoutReceiver(tokenStore))
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.RequireAuth(tokenSvc))
+		r.Post("/auth/logout/all", logoutHandler.RevokeAll)
 		r.Post("/account/2fa/enroll", totpHandler.Enroll)
 		r.Post("/account/2fa/confirm", totpHandler.Confirm)
 	})
+
+	// OAuth2/OIDC (Phase 11)
+	oauthClients := oauth.NewClientRepository(cassSession)
+	oauthConsents := oauth.NewConsentRepository(cassSession)
+	oauthHandlers := oauth.NewOAuthHandlers(oauthClients, oauthConsents, userRepo, redisClient, tokenSvc, cfg.JWTIssuer, cfg.BaseURL)
+	r.Get("/.well-known/openid-configuration", oauthHandlers.Discovery)
+	r.Post("/oauth/token", oauthHandlers.Token)
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.RequireAuth(tokenSvc))
+		r.Get("/oauth/authorize", oauthHandlers.Authorize)
+		r.Post("/oauth/consent", oauthHandlers.Consent)
+		r.Get("/oauth/userinfo", oauthHandlers.Userinfo)
+	})
+
+	// Google federation (Phase 13)
+	if cfg.GoogleClientID != "" {
+		federatedIdentityRepo := user.NewFederatedIdentityRepository(cassSession)
+		fedHandler := auth.NewFederationHandler(cfg.GoogleClientID, cfg.GoogleClientSecret, cfg.BaseURL,
+			userRepo, federatedIdentityRepo, tokenStore, tokenSvc, cfg.Pepper, cfg.JWTIssuer)
+		r.Get("/auth/federation/google", fedHandler.GoogleRedirect)
+		r.Get("/auth/federation/google/callback", fedHandler.GoogleCallback)
+	}
 
 	// HTTP server with graceful shutdown
 	srv := &http.Server{

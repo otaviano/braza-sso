@@ -82,62 +82,62 @@
 
 ## 10. Rate Limiting
 
-- [ ] 10.1 Implement Redis sliding window rate limiter middleware (INCR + EXPIRE)
-- [ ] 10.2 Apply per-IP limit (20 req/min) to `/auth/login`
-- [ ] 10.3 Apply per-account limit (10 req/5min) to `/auth/login`
-- [ ] 10.4 Apply per-IP limit (5 req/10min) to `/auth/register`
-- [ ] 10.5 Apply per-email silent drop (3 req/15min) to `/auth/password/reset-request`
-- [ ] 10.6 Return HTTP 429 with `Retry-After` header for blocked requests
+- [x] 10.1 Implement Redis sliding window rate limiter middleware (INCR + EXPIRE)
+- [x] 10.2 Apply per-IP limit (20 req/min) to `/auth/login`
+- [x] 10.3 Apply per-account limit (10 req/5min) to `/auth/login`
+- [x] 10.4 Apply per-IP limit (5 req/10min) to `/auth/register`
+- [x] 10.5 Apply per-email silent drop (3 req/15min) to `/auth/password/reset-request`
+- [x] 10.6 Return HTTP 429 with `Retry-After` header for blocked requests
 
 ## 11. OAuth2 / OIDC
 
-- [ ] 11.1 Implement `GET /oauth/authorize` endpoint: validate client_id, redirect_uri, response_type, scope, state
-- [ ] 11.2 Implement authorization code generation (crypto/rand, stored in Redis with 60-second TTL)
-- [ ] 11.3 Implement consent screen logic: check existing consent in Cassandra, skip or show UI
-- [ ] 11.4 Implement `POST /oauth/token` endpoint: authorization code exchange, return access token + refresh token + ID token
-- [ ] 11.5 Implement `GET /.well-known/openid-configuration` OIDC discovery endpoint
-- [ ] 11.6 Implement `GET /oauth/userinfo` endpoint returning OIDC claims from JWT
-- [ ] 11.7 Implement client credentials grant for machine-to-machine auth
-- [ ] 11.8 Write integration tests for full authorization code flow
+- [x] 11.1 Implement `GET /oauth/authorize` endpoint: validate client_id, redirect_uri, response_type, scope, state
+- [x] 11.2 Implement authorization code generation (crypto/rand, stored in Redis with 60-second TTL)
+- [x] 11.3 Implement consent screen logic: check existing consent in Cassandra, skip or show UI
+- [x] 11.4 Implement `POST /oauth/token` endpoint: authorization code exchange, return access token + refresh token + ID token
+- [x] 11.5 Implement `GET /.well-known/openid-configuration` OIDC discovery endpoint
+- [x] 11.6 Implement `GET /oauth/userinfo` endpoint returning OIDC claims from JWT
+- [x] 11.7 Implement client credentials grant for machine-to-machine auth
+- [x] 11.8 Write integration tests for full authorization code flow
 
 ## 12. Single Logout (SLO)
 
-- [ ] 12.1 Implement `POST /auth/logout` endpoint: delete refresh token from Redis, clear cookie
-- [ ] 12.2 Implement back-channel logout: send signed logout token (JWT) to each SP's logout URI
-- [ ] 12.3 Make logout idempotent (return 200 even if session not found)
+- [x] 12.1 Implement `POST /auth/logout` endpoint: delete refresh token from Redis, clear cookie
+- [x] 12.2 Implement back-channel logout: send signed logout token (JWT) to each SP's logout URI
+- [x] 12.3 Make logout idempotent (return 200 even if session not found)
 
 ## 13. External IdP Federation
 
-- [ ] 13.1 Implement Google OAuth2 federation: `/auth/federation/google` redirect and `/auth/federation/google/callback` handler
-- [ ] 13.2 Implement state parameter validation (CSRF protection) for federation flows
-- [ ] 13.3 Implement account linking: match federated email to existing account or auto-create
-- [ ] 13.4 Store federated identity in `federated_identities` Cassandra table
-- [ ] 13.5 Implement Keycloak OIDC federation (optional v1): `/auth/federation/keycloak` flow
+- [x] 13.1 Implement Google OAuth2 federation: `/auth/federation/google` redirect and `/auth/federation/google/callback` handler
+- [x] 13.2 Implement state parameter validation (CSRF protection) for federation flows
+- [x] 13.3 Implement account linking: match federated email to existing account or auto-create
+- [x] 13.4 Store federated identity in `federated_identities` Cassandra table
+- [x] 13.5 Implement Keycloak OIDC federation (optional v1): `/auth/federation/keycloak` flow
 
 ## 14. Email Service
 
-- [ ] 14.1 Implement email client abstraction (interface) with SMTP implementation
-- [ ] 14.2 Configure SMTP relay (SendGrid/Mailgun) via env vars
-- [ ] 14.3 Create HTML email templates: verification, password reset, account lockout, unlock
-- [ ] 14.4 Write unit tests with mock email client
+- [x] 14.1 Implement email client abstraction (interface) with SMTP implementation
+- [x] 14.2 Configure SMTP relay (SendGrid/Mailgun) via env vars
+- [x] 14.3 Create HTML email templates: verification, password reset, account lockout, unlock
+- [x] 14.4 Write unit tests with mock email client
 
 ## 15. React Frontend
 
-- [ ] 15.1 Implement Login page with email/password form and "Continue with Google" button
-- [ ] 15.2 Implement Registration page with password strength indicator
-- [ ] 15.3 Implement Email Verification page (token from URL param)
-- [ ] 15.4 Implement Password Reset request and confirmation pages
-- [ ] 15.5 Implement 2FA enrollment page (QR code display + recovery codes)
-- [ ] 15.6 Implement 2FA verification page (TOTP input during login)
-- [ ] 15.7 Implement OAuth2 Consent screen (client info + requested scopes)
-- [ ] 15.8 Implement Account Locked page with resend-unlock option
-- [ ] 15.9 Configure Axios/fetch interceptor for automatic token refresh
-- [ ] 15.10 Configure Nginx in frontend container to proxy `/api` to Go API
+- [x] 15.1 Implement Login page with email/password form and "Continue with Google" button
+- [x] 15.2 Implement Registration page with password strength indicator
+- [x] 15.3 Implement Email Verification page (token from URL param)
+- [x] 15.4 Implement Password Reset request and confirmation pages
+- [x] 15.5 Implement 2FA enrollment page (QR code display + recovery codes)
+- [x] 15.6 Implement 2FA verification page (TOTP input during login)
+- [x] 15.7 Implement OAuth2 Consent screen (client info + requested scopes)
+- [x] 15.8 Implement Account Locked page with resend-unlock option
+- [x] 15.9 Configure Axios/fetch interceptor for automatic token refresh
+- [x] 15.10 Configure Nginx in frontend container to proxy `/api` to Go API
 
 ## 16. CI/CD Pipeline
 
-- [ ] 16.1 Write `.github/workflows/ci.yml`: lint (golangci-lint + eslint), test, build Docker images, push to GHCR
-- [ ] 16.2 Write `.github/workflows/deploy.yml`: trigger on CI success on `main`, SSH to VPS, `docker compose pull && up -d`
+- [x] 16.1 Write `.github/workflows/ci.yml`: lint (golangci-lint + eslint), test, build Docker images, push to GHCR
+- [x] 16.2 Write `.github/workflows/deploy.yml`: trigger on CI success on `main`, SSH to VPS, `docker compose pull && up -d`
 - [ ] 16.3 Configure GitHub repository secrets: `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `GHCR_TOKEN`, all app env vars
 - [ ] 16.4 Add branch protection rule on `main` requiring CI status checks to pass
 - [ ] 16.5 Test full pipeline end-to-end: push to main → CI → deploy
