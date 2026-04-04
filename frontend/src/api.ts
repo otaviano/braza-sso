@@ -17,7 +17,7 @@ export const api = {
     request('POST', '/auth/register', { email, password }),
 
   login: (email: string, password: string) =>
-    request<{ access_token?: string; mfa_required?: boolean; mfa_session_id?: string }>(
+    request<{ mfa_required?: boolean; mfa_session_id?: string }>(
       'POST', '/auth/login', { email, password }
     ),
 
@@ -33,22 +33,22 @@ export const api = {
   resetPassword: (token: string, password: string) =>
     request('POST', '/auth/password/reset', { token, password }),
 
-  mfaVerify: (mfa_session_id: string, code: string) =>
-    request<{ access_token: string }>('POST', '/auth/2fa/verify', { mfa_session_id, code }),
+  mfaVerify: (mfaSessionId: string, code: string) =>
+    request('POST', '/auth/2fa/verify', { mfa_session_id: mfaSessionId, code }),
 
-  mfaRecovery: (mfa_session_id: string, recovery_code: string) =>
-    request<{ access_token: string }>('POST', '/auth/2fa/recovery', { mfa_session_id, recovery_code }),
+  mfaRecovery: (mfaSessionId: string, recoveryCode: string) =>
+    request('POST', '/auth/2fa/recovery', { mfa_session_id: mfaSessionId, recovery_code: recoveryCode }),
 
-  enroll2fa: (token: string) =>
+  enroll2fa: () =>
     request<{ secret: string; otp_uri: string; recovery_codes: string[] }>(
       'POST', '/account/2fa/enroll', undefined
     ),
 
-  confirm2fa: (token: string, code: string) =>
+  confirm2fa: (code: string) =>
     request('POST', '/account/2fa/confirm', { code }),
 
   refresh: () =>
-    request<{ access_token: string }>('POST', '/auth/token/refresh'),
+    request('POST', '/auth/token/refresh'),
 
   logout: () =>
     request('POST', '/auth/logout'),

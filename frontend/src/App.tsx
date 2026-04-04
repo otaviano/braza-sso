@@ -34,26 +34,44 @@ function getInitialPage(): Page {
   return 'login';
 }
 
+const layout: React.CSSProperties = {
+  minHeight: '100vh',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  background: '#f5f5f5',
+};
+
 export default function App() {
   const [page, setPage] = useState<Page>(getInitialPage);
   const [mfaSession, setMfaSession] = useState('');
 
+  function navigateToLogin() {
+    setMfaSession('');
+    setPage('login');
+  }
+
+  function handleMFARequired(sessionId: string) {
+    setMfaSession(sessionId);
+    setPage('2fa-verify');
+  }
+
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f5f5' }}>
+    <div style={layout}>
       {page === 'login' && (
         <Login
           onRegister={() => setPage('register')}
           onForgotPassword={() => setPage('reset-password')}
-          onMFARequired={(sessionId) => { setMfaSession(sessionId); setPage('2fa-verify'); }}
+          onMFARequired={handleMFARequired}
         />
       )}
-      {page === 'register' && <Register onLogin={() => setPage('login')} />}
+      {page === 'register' && <Register onLogin={navigateToLogin} />}
       {page === 'verify-email' && <VerifyEmail />}
-      {page === 'reset-password' && <PasswordReset onBack={() => setPage('login')} />}
-      {page === 'reset-password-confirm' && <PasswordResetConfirm onDone={() => setPage('login')} />}
-      {page === '2fa-verify' && <TwoFAVerify sessionId={mfaSession} onDone={() => setPage('login')} />}
-      {page === '2fa-enroll' && <TwoFAEnroll onDone={() => setPage('login')} />}
-      {page === 'account-locked' && <AccountLocked onBack={() => setPage('login')} />}
+      {page === 'reset-password' && <PasswordReset onBack={navigateToLogin} />}
+      {page === 'reset-password-confirm' && <PasswordResetConfirm onDone={navigateToLogin} />}
+      {page === '2fa-verify' && <TwoFAVerify sessionId={mfaSession} onDone={navigateToLogin} />}
+      {page === '2fa-enroll' && <TwoFAEnroll onDone={navigateToLogin} />}
+      {page === 'account-locked' && <AccountLocked onBack={navigateToLogin} />}
       {page === 'consent' && <ConsentScreen />}
     </div>
   );

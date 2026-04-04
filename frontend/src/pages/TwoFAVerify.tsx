@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { api } from '../api';
+import { card, title, form, input, btn, link, errorStyle } from '../styles';
 
 interface Props { sessionId: string; onDone: () => void; }
 
@@ -15,21 +16,21 @@ export default function TwoFAVerify({ sessionId, onDone }: Props) {
     setError('');
     setLoading(true);
     try {
-      let res;
       if (mode === 'totp') {
-        res = await api.mfaVerify(sessionId, code);
+        await api.mfaVerify(sessionId, code);
       } else {
-        res = await api.mfaRecovery(sessionId, recovery);
+        await api.mfaRecovery(sessionId, recovery);
       }
-      if (res.access_token) {
-        localStorage.setItem('access_token', res.access_token);
-        window.location.href = '/';
-      }
-    } catch (err: any) {
-      setError(err.message ?? 'Verification failed');
+      window.location.href = '/';
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Verification failed');
     } finally {
       setLoading(false);
     }
+  }
+
+  function toggleMode() {
+    setMode(mode === 'totp' ? 'recovery' : 'totp');
   }
 
   return (
@@ -45,18 +46,13 @@ export default function TwoFAVerify({ sessionId, onDone }: Props) {
         <button style={btn} type="submit" disabled={loading}>{loading ? 'Verifying…' : 'Verify'}</button>
       </form>
       <div style={{ textAlign: 'center', marginTop: '1rem' }}>
-        <button style={link} onClick={() => setMode(mode === 'totp' ? 'recovery' : 'totp')}>
+        <button style={link} onClick={toggleMode}>
           {mode === 'totp' ? 'Use a recovery code' : 'Use authenticator app'}
         </button>
+      </div>
+      <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
+        <button style={link} onClick={onDone}>Back to sign in</button>
       </div>
     </div>
   );
 }
-
-const card: React.CSSProperties = { background: '#fff', borderRadius: 12, padding: '2rem', width: 360, boxShadow: '0 2px 16px rgba(0,0,0,0.1)' };
-const title: React.CSSProperties = { marginBottom: '1.5rem', fontSize: '1.5rem', textAlign: 'center' };
-const form: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '0.75rem' };
-const input: React.CSSProperties = { padding: '0.625rem', borderRadius: 6, border: '1px solid #ddd', fontSize: '1rem' };
-const btn: React.CSSProperties = { padding: '0.75rem', background: '#0066ff', color: '#fff', border: 'none', borderRadius: 6, fontSize: '1rem', cursor: 'pointer' };
-const link: React.CSSProperties = { background: 'none', border: 'none', color: '#0066ff', cursor: 'pointer', fontSize: '0.875rem' };
-const errorStyle: React.CSSProperties = { color: '#c00', fontSize: '0.875rem' };

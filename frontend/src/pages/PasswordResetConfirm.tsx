@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { api } from '../api';
+import { card, title, form, input, btn, errorStyle } from '../styles';
 
 interface Props { onDone: () => void; }
 
@@ -16,8 +17,8 @@ export default function PasswordResetConfirm({ onDone }: Props) {
     try {
       await api.resetPassword(token, password);
       onDone();
-    } catch (err: any) {
-      setError(err.message ?? 'Reset failed');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Reset failed');
     } finally {
       setLoading(false);
     }
@@ -34,10 +35,3 @@ export default function PasswordResetConfirm({ onDone }: Props) {
     </div>
   );
 }
-
-const card: React.CSSProperties = { background: '#fff', borderRadius: 12, padding: '2rem', width: 360, boxShadow: '0 2px 16px rgba(0,0,0,0.1)' };
-const title: React.CSSProperties = { marginBottom: '1.5rem', fontSize: '1.5rem', textAlign: 'center' };
-const form: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '0.75rem' };
-const input: React.CSSProperties = { padding: '0.625rem', borderRadius: 6, border: '1px solid #ddd', fontSize: '1rem' };
-const btn: React.CSSProperties = { padding: '0.75rem', background: '#0066ff', color: '#fff', border: 'none', borderRadius: 6, fontSize: '1rem', cursor: 'pointer' };
-const errorStyle: React.CSSProperties = { color: '#c00', fontSize: '0.875rem' };
