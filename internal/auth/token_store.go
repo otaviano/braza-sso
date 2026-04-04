@@ -126,6 +126,22 @@ func (ts *TokenStore) ConsumeMFASession(ctx context.Context, token string) (stri
 	return userID, err
 }
 
+// SetState stores an OAuth state token mapped to a returnTo URL.
+func (ts *TokenStore) SetState(ctx context.Context, state, returnTo string) error {
+	key := prefixRateLimit + "oauth_state:" + state
+	return ts.redis.Set(ctx, key, returnTo, 10*time.Minute).Err()
+}
+
+// ConsumeState retrieves and deletes an OAuth state token.
+func (ts *TokenStore) ConsumeState(ctx context.Context, state string) (string, error) {
+	key := prefixRateLimit + "oauth_state:" + state
+	val, err := ts.redis.GetDel(ctx, key).Result()
+	if err == redis.Nil {
+		return "", ErrTokenNotFound
+	}
+	return val, err
+}
+
 // IncrLoginAttempts increments the failed login counter for userID within the sliding window.
 // Returns the new count.
 func (ts *TokenStore) IncrLoginAttempts(ctx context.Context, userID string) (int64, error) {
