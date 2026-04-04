@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/otaviano/braza-sso/internal/email"
 	"github.com/otaviano/braza-sso/internal/user"
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -133,6 +134,10 @@ func (h *LoginHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	// Verify password
 	if err := VerifyPassword(req.Password, h.pepper, u.PasswordHash); err != nil {
+		log.Warn().
+			Str("email", u.Email).
+			Str("ip", r.RemoteAddr).
+			Msg("failed login attempt")
 		h.handleFailedAttempt(r.Context(), u)
 		writeError(w, http.StatusUnauthorized, "invalid credentials")
 		return
@@ -207,15 +212,7 @@ func (h *LoginHandler) issueTokenPair(w http.ResponseWriter, r *http.Request, u 
 		return
 	}
 
-	http.SetCookie(w, &http.Cookie{
-		Name:     refreshCookieName,
-		Value:    refreshToken,
-		Path:     "/auth/token/refresh",
-		MaxAge:   int(refreshTokenTTL.Seconds()),
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteStrictMode,
-	})
+	setRefreshCookie(w, refreshToken)
 
 	writeJSON(w, http.StatusOK, loginResponse{
 		AccessToken: accessToken,
@@ -237,8 +234,16 @@ func (h *LoginHandler) handleFailedAttempt(ctx context.Context, u *user.User) {
 	if count >= int64(MaxLoginAttempts()) {
 		t := time.Now().Add(LockoutDuration())
 		lockedUntil = &t
+		log.Warn().
+			Str("user_id", u.ID.String()).
+			Str("email", u.Email).
+			Msg("account locked due to excessive failed login attempts")
 		unlockURL := fmt.Sprintf("%s/auth/unlock", h.baseURL)
-		go h.mailer.SendAccountLocked(u.Email, unlockURL)
+		go func() {
+			if err := h.mailer.SendAccountLocked(u.Email, unlockURL); err != nil {
+				log.Warn().Err(err).Str("email", u.Email).Msg("failed to send account locked email")
+			}
+		}()
 	}
 
 	h.users.UpdateFailedAttempts(u.ID, newAttempts, lockedUntil)

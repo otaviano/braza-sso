@@ -1,14 +1,11 @@
 package auth
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
-	"time"
 
-	"github.com/google/uuid"
-	"github.com/otaviano/braza-sso/internal/user"
+	"github.com/rs/zerolog/log"
 )
 
 // LogoutTokenStore is the TokenStore subset needed by LogoutHandler.
@@ -17,19 +14,21 @@ type LogoutTokenStore interface {
 	RevokeAllUserSessions(ctx context.Context, userID string) error
 }
 
-// LogoutClientRepository is used to notify service providers on back-channel logout.
-type LogoutClientRepository interface {
-	FindByID(clientID string) (*user.User, error) // placeholder — SPs stored in oauth_clients
+// BackChannelNotifier sends logout notifications to registered relying parties.
+// Implementations must be safe to call from a goroutine.
+type BackChannelNotifier interface {
+	NotifyLogout(ctx context.Context, userID string, logoutToken string) error
 }
 
 // LogoutHandler handles POST /auth/logout.
 type LogoutHandler struct {
-	tokens  LogoutTokenStore
-	jwt     *TokenService
+	tokens   LogoutTokenStore
+	jwt      *TokenService
+	notifier BackChannelNotifier // optional; nil disables back-channel notifications
 }
 
-func NewLogoutHandler(tokens *TokenStore, jwt *TokenService) *LogoutHandler {
-	return &LogoutHandler{tokens: tokens, jwt: jwt}
+func NewLogoutHandler(tokens *TokenStore, jwt *TokenService, notifier BackChannelNotifier) *LogoutHandler {
+	return &LogoutHandler{tokens: tokens, jwt: jwt, notifier: notifier}
 }
 
 // Logout handles POST /auth/logout — deletes refresh token, clears cookie.
@@ -37,45 +36,27 @@ func NewLogoutHandler(tokens *TokenStore, jwt *TokenService) *LogoutHandler {
 func (h *LogoutHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie(refreshCookieName)
 	if err == nil && cookie.Value != "" {
-		// Best-effort consume — ignore errors (idempotent)
 		userIDStr, err := h.tokens.ConsumeRefreshToken(r.Context(), cookie.Value)
-		if err == nil {
-			// Optionally send back-channel logout to registered SPs
+		if err == nil && h.notifier != nil {
 			go h.backChannelLogout(r.Context(), userIDStr)
 		}
 	}
 
-	// Clear cookie regardless
-	http.SetCookie(w, &http.Cookie{
-		Name:     refreshCookieName,
-		Value:    "",
-		Path:     "/auth/token/refresh",
-		MaxAge:   -1,
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteStrictMode,
-	})
-
+	clearRefreshCookie(w)
 	w.WriteHeader(http.StatusOK)
 }
 
-// backChannelLogout sends a signed logout token to each SP's logout URI.
-// This is a best-effort fire-and-forget operation.
+// backChannelLogout issues a signed logout token and notifies all relying parties.
 func (h *LogoutHandler) backChannelLogout(ctx context.Context, userIDStr string) {
-	userID, err := uuid.Parse(userIDStr)
+	logoutToken, err := h.jwt.IssueAccessToken(userIDStr, "", false, "logout")
 	if err != nil {
+		log.Warn().Err(err).Str("user_id", userIDStr).Msg("back-channel logout: failed to issue logout token")
 		return
 	}
 
-	// Issue a logout token (JWT with event claim)
-	logoutToken, err := h.jwt.IssueAccessToken(userID.String(), "", false, "logout")
-	if err != nil {
-		return
+	if err := h.notifier.NotifyLogout(ctx, userIDStr, logoutToken); err != nil {
+		log.Warn().Err(err).Str("user_id", userIDStr).Msg("back-channel logout: notification failed")
 	}
-
-	// In a full implementation, iterate registered SP logout URIs from the DB.
-	// For now, this is the hook point — SPs would be looked up and notified here.
-	_ = logoutToken
 }
 
 // RevokeAll handles POST /auth/logout/all — revokes all sessions for the authenticated user.
@@ -86,15 +67,7 @@ func (h *LogoutHandler) RevokeAll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.tokens.RevokeAllUserSessions(r.Context(), userIDStr)
-	http.SetCookie(w, &http.Cookie{
-		Name:     refreshCookieName,
-		Value:    "",
-		Path:     "/auth/token/refresh",
-		MaxAge:   -1,
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteStrictMode,
-	})
+	clearRefreshCookie(w)
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -112,11 +85,4 @@ func BackChannelLogoutReceiver(tokens *TokenStore) http.HandlerFunc {
 		_ = body.LogoutToken
 		w.WriteHeader(http.StatusOK)
 	}
-}
-
-// sendLogoutToken is a helper used by back-channel logout to POST to an SP.
-func sendLogoutToken(uri, token string) {
-	body, _ := json.Marshal(map[string]string{"logout_token": token})
-	client := &http.Client{Timeout: 5 * time.Second}
-	client.Post(uri, "application/json", bytes.NewReader(body)) //nolint:errcheck
 }
