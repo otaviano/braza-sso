@@ -1,121 +1,60 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useState } from 'react';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import VerifyEmail from './pages/VerifyEmail';
+import PasswordReset from './pages/PasswordReset';
+import PasswordResetConfirm from './pages/PasswordResetConfirm';
+import TwoFAVerify from './pages/TwoFAVerify';
+import TwoFAEnroll from './pages/TwoFAEnroll';
+import AccountLocked from './pages/AccountLocked';
+import ConsentScreen from './pages/ConsentScreen';
 
-function App() {
-  const [count, setCount] = useState(0)
+type Page =
+  | 'login'
+  | 'register'
+  | 'verify-email'
+  | 'reset-password'
+  | 'reset-password-confirm'
+  | '2fa-verify'
+  | '2fa-enroll'
+  | 'account-locked'
+  | 'consent';
 
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+function getInitialPage(): Page {
+  const path = window.location.pathname;
+  const params = new URLSearchParams(window.location.search);
+  if (path.includes('verify-email')) return 'verify-email';
+  if (path.includes('reset-password') && params.has('token')) return 'reset-password-confirm';
+  if (path.includes('reset-password')) return 'reset-password';
+  if (path.includes('2fa-enroll')) return '2fa-enroll';
+  if (path.includes('2fa-verify')) return '2fa-verify';
+  if (path.includes('register')) return 'register';
+  if (path.includes('locked')) return 'account-locked';
+  if (path.includes('consent')) return 'consent';
+  return 'login';
 }
 
-export default App
+export default function App() {
+  const [page, setPage] = useState<Page>(getInitialPage);
+  const [mfaSession, setMfaSession] = useState('');
+
+  return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f5f5' }}>
+      {page === 'login' && (
+        <Login
+          onRegister={() => setPage('register')}
+          onForgotPassword={() => setPage('reset-password')}
+          onMFARequired={(sessionId) => { setMfaSession(sessionId); setPage('2fa-verify'); }}
+        />
+      )}
+      {page === 'register' && <Register onLogin={() => setPage('login')} />}
+      {page === 'verify-email' && <VerifyEmail />}
+      {page === 'reset-password' && <PasswordReset onBack={() => setPage('login')} />}
+      {page === 'reset-password-confirm' && <PasswordResetConfirm onDone={() => setPage('login')} />}
+      {page === '2fa-verify' && <TwoFAVerify sessionId={mfaSession} onDone={() => setPage('login')} />}
+      {page === '2fa-enroll' && <TwoFAEnroll onDone={() => setPage('login')} />}
+      {page === 'account-locked' && <AccountLocked onBack={() => setPage('login')} />}
+      {page === 'consent' && <ConsentScreen />}
+    </div>
+  );
+}
