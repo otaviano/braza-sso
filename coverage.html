@@ -1,0 +1,2143 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>auth: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/otaviano/braza-sso/internal/auth/context.go (100.0%)</option>
+				
+				<option value="file1">github.com/otaviano/braza-sso/internal/auth/cookie.go (100.0%)</option>
+				
+				<option value="file2">github.com/otaviano/braza-sso/internal/auth/federation.go (0.0%)</option>
+				
+				<option value="file3">github.com/otaviano/braza-sso/internal/auth/jwt.go (0.0%)</option>
+				
+				<option value="file4">github.com/otaviano/braza-sso/internal/auth/login.go (90.1%)</option>
+				
+				<option value="file5">github.com/otaviano/braza-sso/internal/auth/logout.go (69.0%)</option>
+				
+				<option value="file6">github.com/otaviano/braza-sso/internal/auth/password.go (97.7%)</option>
+				
+				<option value="file7">github.com/otaviano/braza-sso/internal/auth/password_reset.go (82.7%)</option>
+				
+				<option value="file8">github.com/otaviano/braza-sso/internal/auth/register.go (86.8%)</option>
+				
+				<option value="file9">github.com/otaviano/braza-sso/internal/auth/token_store.go (7.7%)</option>
+				
+				<option value="file10">github.com/otaviano/braza-sso/internal/auth/totp.go (77.6%)</option>
+				
+				<option value="file11">github.com/otaviano/braza-sso/internal/middleware/auth.go (100.0%)</option>
+				
+				<option value="file12">github.com/otaviano/braza-sso/internal/middleware/ratelimit.go (72.7%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">no coverage</span>
+				<span class="cov1">low coverage</span>
+				<span class="cov2">*</span>
+				<span class="cov3">*</span>
+				<span class="cov4">*</span>
+				<span class="cov5">*</span>
+				<span class="cov6">*</span>
+				<span class="cov7">*</span>
+				<span class="cov8">*</span>
+				<span class="cov9">*</span>
+				<span class="cov10">high coverage</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package auth
+
+import "context"
+
+// ContextKey is the type used for request context keys set by auth middleware.
+type ContextKey string
+
+const (
+        // ContextKeyUserID is the context key for the authenticated user's UUID string.
+        ContextKeyUserID ContextKey = "user_id"
+        // ContextKeyEmail is the context key for the authenticated user's email.
+        ContextKeyEmail ContextKey = "email"
+)
+
+// UserIDFromContext extracts the authenticated user ID from a request context.
+func UserIDFromContext(ctx context.Context) (string, bool) <span class="cov10" title="16">{
+        v, ok := ctx.Value(ContextKeyUserID).(string)
+        return v, ok
+}</span>
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">// Package auth provides authentication handlers and supporting utilities.
+package auth
+
+import "net/http"
+
+// setRefreshCookie attaches the refresh token as an HttpOnly, Secure, SameSite=Strict cookie.
+func setRefreshCookie(w http.ResponseWriter, token string) <span class="cov10" title="7">{
+        http.SetCookie(w, &amp;http.Cookie{
+                Name:     refreshCookieName,
+                Value:    token,
+                Path:     "/auth/token/refresh",
+                MaxAge:   int(refreshTokenTTL.Seconds()),
+                HttpOnly: true,
+                Secure:   true,
+                SameSite: http.SameSiteStrictMode,
+        })
+}</span>
+
+// clearRefreshCookie expires the refresh token cookie immediately.
+func clearRefreshCookie(w http.ResponseWriter) <span class="cov9" title="6">{
+        http.SetCookie(w, &amp;http.Cookie{
+                Name:     refreshCookieName,
+                Value:    "",
+                Path:     "/auth/token/refresh",
+                MaxAge:   -1,
+                HttpOnly: true,
+                Secure:   true,
+                SameSite: http.SameSiteStrictMode,
+        })
+}</span>
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package auth
+
+import (
+        "context"
+        "crypto/rand"
+        "encoding/base64"
+        "fmt"
+        "net/http"
+        "time"
+
+        gooidc "github.com/coreos/go-oidc/v3/oidc"
+        "github.com/google/uuid"
+        "github.com/otaviano/braza-sso/internal/user"
+        "github.com/rs/zerolog/log"
+        "golang.org/x/oauth2"
+        "golang.org/x/oauth2/google"
+)
+
+// FederationStore manages short-lived OAuth state tokens in Redis.
+type FederationStore interface {
+        SetState(ctx context.Context, state, returnTo string) error
+        ConsumeState(ctx context.Context, state string) (string, error)
+        StoreRefreshToken(ctx context.Context, token, userID string, ttl time.Duration) error
+}
+
+// FederationUserRepository looks up and creates users for federated logins.
+type FederationUserRepository interface {
+        FindByEmail(email string) (*user.User, error)
+        Create(u *user.User) error
+}
+
+// FederationIdentityRepository persists federated identity records.
+type FederationIdentityRepository interface {
+        Upsert(userID uuid.UUID, provider, providerUserID, email string) error
+}
+
+// FederationHandler handles Google OAuth2 federation.
+type FederationHandler struct {
+        googleCfg    *oauth2.Config
+        oidcVerifier *gooidc.IDTokenVerifier
+        users        FederationUserRepository
+        identities   FederationIdentityRepository
+        tokenStore   FederationStore
+        jwt          LoginTokenService
+        pepper       string
+        jwtIssuer    string
+}
+
+func NewFederationHandler(
+        clientID, clientSecret, baseURL string,
+        users *user.Repository,
+        identities *user.FederatedIdentityRepository,
+        tokenStore *TokenStore,
+        jwt *TokenService,
+        pepper, jwtIssuer string,
+) (*FederationHandler, error) <span class="cov0" title="0">{
+        cfg := &amp;oauth2.Config{
+                ClientID:     clientID,
+                ClientSecret: clientSecret,
+                RedirectURL:  baseURL + "/auth/federation/google/callback",
+                Scopes:       []string{gooidc.ScopeOpenID, "email", "profile"},
+                Endpoint:     google.Endpoint,
+        }
+
+        provider, err := gooidc.NewProvider(context.Background(), "https://accounts.google.com")
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("creating OIDC provider: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">verifier := provider.Verifier(&amp;gooidc.Config{ClientID: clientID})
+
+        return &amp;FederationHandler{
+                googleCfg:    cfg,
+                oidcVerifier: verifier,
+                users:        users,
+                identities:   identities,
+                tokenStore:   tokenStore,
+                jwt:          jwt,
+                pepper:       pepper,
+                jwtIssuer:    jwtIssuer,
+        }, nil</span>
+}
+
+// NewFederationHandlerWithDeps creates a handler with injected dependencies (for testing).
+func NewFederationHandlerWithDeps(
+        googleCfg *oauth2.Config,
+        oidcVerifier *gooidc.IDTokenVerifier,
+        users FederationUserRepository,
+        identities FederationIdentityRepository,
+        tokenStore FederationStore,
+        jwt LoginTokenService,
+        pepper, jwtIssuer string,
+) *FederationHandler <span class="cov0" title="0">{
+        return &amp;FederationHandler{
+                googleCfg:    googleCfg,
+                oidcVerifier: oidcVerifier,
+                users:        users,
+                identities:   identities,
+                tokenStore:   tokenStore,
+                jwt:          jwt,
+                pepper:       pepper,
+                jwtIssuer:    jwtIssuer,
+        }
+}</span>
+
+// GoogleRedirect handles GET /auth/federation/google — redirects to Google.
+func (h *FederationHandler) GoogleRedirect(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
+        state := randomStateToken()
+        returnTo := r.URL.Query().Get("return_to")
+        if err := h.tokenStore.SetState(r.Context(), state, returnTo); err != nil </span><span class="cov0" title="0">{
+                log.Warn().Err(err).Msg("federation: failed to store OAuth state token")
+                http.Error(w, `{"error":"internal error"}`, http.StatusInternalServerError)
+                return
+        }</span>
+        <span class="cov0" title="0">redirectURL := h.googleCfg.AuthCodeURL(state, oauth2.AccessTypeOnline)
+        http.Redirect(w, r, redirectURL, http.StatusFound)</span>
+}
+
+// GoogleCallback handles GET /auth/federation/google/callback.
+func (h *FederationHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
+        state := r.URL.Query().Get("state")
+        code := r.URL.Query().Get("code")
+
+        if _, err := h.tokenStore.ConsumeState(r.Context(), state); err != nil </span><span class="cov0" title="0">{
+                http.Error(w, `{"error":"invalid state"}`, http.StatusBadRequest)
+                return
+        }</span>
+
+        <span class="cov0" title="0">token, err := h.googleCfg.Exchange(r.Context(), code)
+        if err != nil </span><span class="cov0" title="0">{
+                http.Error(w, `{"error":"code exchange failed"}`, http.StatusBadRequest)
+                return
+        }</span>
+
+        // Verify the id_token JWT signature and claims before trusting any identity data.
+        <span class="cov0" title="0">rawIDToken, ok := token.Extra("id_token").(string)
+        if !ok || rawIDToken == "" </span><span class="cov0" title="0">{
+                http.Error(w, `{"error":"id_token missing from response"}`, http.StatusBadRequest)
+                return
+        }</span>
+
+        <span class="cov0" title="0">idToken, err := h.oidcVerifier.Verify(r.Context(), rawIDToken)
+        if err != nil </span><span class="cov0" title="0">{
+                http.Error(w, `{"error":"id_token verification failed"}`, http.StatusUnauthorized)
+                return
+        }</span>
+
+        <span class="cov0" title="0">var claims struct {
+                Sub           string `json:"sub"`
+                Email         string `json:"email"`
+                EmailVerified bool   `json:"email_verified"`
+        }
+        if err := idToken.Claims(&amp;claims); err != nil </span><span class="cov0" title="0">{
+                http.Error(w, `{"error":"failed to parse id_token claims"}`, http.StatusInternalServerError)
+                return
+        }</span>
+
+        <span class="cov0" title="0">if claims.Email == "" </span><span class="cov0" title="0">{
+                http.Error(w, `{"error":"email missing from id_token"}`, http.StatusBadRequest)
+                return
+        }</span>
+
+        <span class="cov0" title="0">u, err := h.findOrCreateUser(r.Context(), claims.Sub, claims.Email, claims.EmailVerified)
+        if err != nil </span><span class="cov0" title="0">{
+                http.Error(w, `{"error":"account creation failed"}`, http.StatusInternalServerError)
+                return
+        }</span>
+
+        <span class="cov0" title="0">if err := h.identities.Upsert(u.ID, "google", claims.Sub, claims.Email); err != nil </span><span class="cov0" title="0">{
+                log.Warn().Err(err).Str("user_id", u.ID.String()).Msg("federation: failed to upsert identity record")
+        }</span>
+
+        <span class="cov0" title="0">accessToken, err := h.jwt.IssueAccessToken(u.ID.String(), u.Email, u.EmailVerified, h.jwtIssuer)
+        if err != nil </span><span class="cov0" title="0">{
+                http.Error(w, `{"error":"token issuance failed"}`, http.StatusInternalServerError)
+                return
+        }</span>
+
+        <span class="cov0" title="0">refreshToken := randomToken(32)
+        if err := h.tokenStore.StoreRefreshToken(r.Context(), refreshToken, u.ID.String(), refreshTokenTTL); err != nil </span><span class="cov0" title="0">{
+                http.Error(w, `{"error":"failed to store session"}`, http.StatusInternalServerError)
+                return
+        }</span>
+        <span class="cov0" title="0">setRefreshCookie(w, refreshToken)
+
+        writeJSON(w, http.StatusOK, loginResponse{
+                AccessToken: accessToken,
+                TokenType:   "Bearer",
+                ExpiresIn:   900,
+        })</span>
+}
+
+func (h *FederationHandler) findOrCreateUser(ctx context.Context, sub, email string, emailVerified bool) (*user.User, error) <span class="cov0" title="0">{
+        existing, err := h.users.FindByEmail(email)
+        if err == nil </span><span class="cov0" title="0">{
+                return existing, nil
+        }</span>
+
+        <span class="cov0" title="0">newUser := &amp;user.User{
+                ID:            uuid.New(),
+                Email:         email,
+                EmailVerified: emailVerified,
+        }
+
+        if createErr := h.users.Create(newUser); createErr != nil &amp;&amp; createErr != user.ErrEmailTaken </span><span class="cov0" title="0">{
+                return nil, createErr
+        }</span>
+
+        // Race condition: another request created the user — re-fetch.
+        <span class="cov0" title="0">if err == user.ErrEmailTaken </span><span class="cov0" title="0">{
+                return h.users.FindByEmail(email)
+        }</span>
+
+        <span class="cov0" title="0">return newUser, nil</span>
+}
+
+func randomStateToken() string <span class="cov0" title="0">{
+        b := make([]byte, 16)
+        if _, err := rand.Read(b); err != nil </span><span class="cov0" title="0">{
+                panic(fmt.Sprintf("crypto/rand.Read: %v", err))</span>
+        }
+        <span class="cov0" title="0">return base64.RawURLEncoding.EncodeToString(b)</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package auth
+
+import (
+        "crypto/rand"
+        "crypto/rsa"
+        "crypto/x509"
+        "encoding/base64"
+        "encoding/hex"
+        "encoding/pem"
+        "errors"
+        "fmt"
+        "math/big"
+        "os"
+        "time"
+
+        "github.com/golang-jwt/jwt/v5"
+)
+
+// Claims represents the JWT payload.
+type Claims struct {
+        Email         string `json:"email"`
+        EmailVerified bool   `json:"email_verified"`
+        jwt.RegisteredClaims
+}
+
+// TokenService handles JWT signing and verification.
+type TokenService struct {
+        privateKey *rsa.PrivateKey
+        issuer     string
+        accessTTL  time.Duration
+}
+
+func NewTokenService(privateKeyPath, issuer string, accessTTL time.Duration) (*TokenService, error) <span class="cov0" title="0">{
+        keyBytes, err := os.ReadFile(privateKeyPath)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("reading private key: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">block, _ := pem.Decode(keyBytes)
+        if block == nil </span><span class="cov0" title="0">{
+                return nil, errors.New("failed to decode PEM block from private key file")
+        }</span>
+
+        <span class="cov0" title="0">privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+        if err != nil </span><span class="cov0" title="0">{
+                // Try PKCS8
+                key, err2 := x509.ParsePKCS8PrivateKey(block.Bytes)
+                if err2 != nil </span><span class="cov0" title="0">{
+                        return nil, fmt.Errorf("parsing private key: %w", err)
+                }</span>
+                <span class="cov0" title="0">var ok bool
+                privateKey, ok = key.(*rsa.PrivateKey)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("private key is not RSA")
+                }</span>
+        }
+
+        <span class="cov0" title="0">return &amp;TokenService{
+                privateKey: privateKey,
+                issuer:     issuer,
+                accessTTL:  accessTTL,
+        }, nil</span>
+}
+
+// IssueAccessToken creates a signed RS256 JWT access token.
+func (ts *TokenService) IssueAccessToken(userID, email string, emailVerified bool, audience string) (string, error) <span class="cov0" title="0">{
+        now := time.Now()
+        jti, err := newJTI()
+        if err != nil </span><span class="cov0" title="0">{
+                return "", fmt.Errorf("IssueAccessToken: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">claims := Claims{
+                Email:         email,
+                EmailVerified: emailVerified,
+                RegisteredClaims: jwt.RegisteredClaims{
+                        Issuer:    ts.issuer,
+                        Subject:   userID,
+                        Audience:  jwt.ClaimStrings{audience},
+                        ExpiresAt: jwt.NewNumericDate(now.Add(ts.accessTTL)),
+                        IssuedAt:  jwt.NewNumericDate(now),
+                        ID:        jti,
+                },
+        }
+
+        token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+        return token.SignedString(ts.privateKey)</span>
+}
+
+// VerifyAccessToken parses and validates a JWT, returning its claims.
+func (ts *TokenService) VerifyAccessToken(tokenStr string) (*Claims, error) <span class="cov0" title="0">{
+        token, err := jwt.ParseWithClaims(tokenStr, &amp;Claims{}, func(t *jwt.Token) (interface{}, error) </span><span class="cov0" title="0">{
+                if _, ok := t.Method.(*jwt.SigningMethodRSA); !ok </span><span class="cov0" title="0">{
+                        return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+                }</span>
+                <span class="cov0" title="0">return &amp;ts.privateKey.PublicKey, nil</span>
+        })
+        <span class="cov0" title="0">if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">claims, ok := token.Claims.(*Claims)
+        if !ok || !token.Valid </span><span class="cov0" title="0">{
+                return nil, errors.New("invalid token")
+        }</span>
+
+        <span class="cov0" title="0">return claims, nil</span>
+}
+
+// PublicKeyJWK returns the RSA public key in JWK format for the JWKS endpoint.
+func (ts *TokenService) PublicKeyJWK() map[string]interface{} <span class="cov0" title="0">{
+        pub := &amp;ts.privateKey.PublicKey
+        return map[string]interface{}{
+                "kty": "RSA",
+                "use": "sig",
+                "alg": "RS256",
+                "kid": "braza-sso-key-1",
+                "n":   base64.RawURLEncoding.EncodeToString(pub.N.Bytes()),
+                "e":   base64.RawURLEncoding.EncodeToString(big.NewInt(int64(pub.E)).Bytes()),
+        }
+}</span>
+
+func newJTI() (string, error) <span class="cov0" title="0">{
+        b := make([]byte, 16)
+        if _, err := rand.Read(b); err != nil </span><span class="cov0" title="0">{
+                return "", fmt.Errorf("generating JTI: %w", err)
+        }</span>
+        <span class="cov0" title="0">return hex.EncodeToString(b), nil</span>
+}
+
+// GenerateRSAKeyPair is a helper for the keygen script — not used in production path.
+func GenerateRSAKeyPair() (*rsa.PrivateKey, error) <span class="cov0" title="0">{
+        return rsa.GenerateKey(rand.Reader, 4096)
+}</span>
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package auth
+
+import (
+        "context"
+        "encoding/json"
+        "fmt"
+        "net/http"
+        "strings"
+        "time"
+
+        "github.com/google/uuid"
+        "github.com/otaviano/braza-sso/internal/email"
+        "github.com/otaviano/braza-sso/internal/user"
+        "github.com/rs/zerolog/log"
+)
+
+const (
+        refreshCookieName = "refresh_token"
+        refreshTokenTTL   = 7 * 24 * time.Hour
+)
+
+// LoginRepository is the subset of user.Repository used by LoginHandler.
+type LoginRepository interface {
+        FindByEmail(email string) (*user.User, error)
+        UpdateFailedAttempts(id uuid.UUID, attempts int, lockedUntil *time.Time) error
+        UpdateFailedAttemptsReset(id uuid.UUID) error
+}
+
+// LoginTokenStore is the subset of TokenStore used by LoginHandler.
+type LoginTokenStore interface {
+        IncrLoginAttempts(ctx context.Context, userID string) (int64, error)
+        ResetLoginAttempts(ctx context.Context, userID string) error
+        StoreRefreshToken(ctx context.Context, token, userID string, ttl time.Duration) error
+        ConsumeRefreshToken(ctx context.Context, token string) (string, error)
+        RevokeAllUserSessions(ctx context.Context, userID string) error
+        StoreMFASession(ctx context.Context, token, userID string, ttl time.Duration) error
+}
+
+// LoginTokenService is the subset of TokenService used by LoginHandler.
+type LoginTokenService interface {
+        IssueAccessToken(userID, email string, emailVerified bool, audience string) (string, error)
+}
+
+// LoginHandler handles POST /auth/login and POST /auth/token/refresh.
+type LoginHandler struct {
+        users   LoginRepository
+        tokens  LoginTokenStore
+        jwt     LoginTokenService
+        mailer  email.Sender
+        pepper  string
+        baseURL string
+        issuer  string
+}
+
+func NewLoginHandler(
+        users *user.Repository,
+        tokens *TokenStore,
+        jwt *TokenService,
+        mailer email.Sender,
+        pepper, baseURL, issuer string,
+) *LoginHandler <span class="cov0" title="0">{
+        return &amp;LoginHandler{
+                users:   users,
+                tokens:  tokens,
+                jwt:     jwt,
+                mailer:  mailer,
+                pepper:  pepper,
+                baseURL: baseURL,
+                issuer:  issuer,
+        }
+}</span>
+
+// NewLoginHandlerWithDeps creates a handler with injected dependencies (for testing).
+func NewLoginHandlerWithDeps(
+        users LoginRepository,
+        tokens LoginTokenStore,
+        jwt LoginTokenService,
+        mailer email.Sender,
+        pepper, baseURL, issuer string,
+) *LoginHandler <span class="cov10" title="19">{
+        return &amp;LoginHandler{
+                users:   users,
+                tokens:  tokens,
+                jwt:     jwt,
+                mailer:  mailer,
+                pepper:  pepper,
+                baseURL: baseURL,
+                issuer:  issuer,
+        }
+}</span>
+
+type loginRequest struct {
+        Email    string `json:"email"`
+        Password string `json:"password"`
+}
+
+type loginResponse struct {
+        AccessToken string `json:"access_token"`
+        TokenType   string `json:"token_type"`
+        ExpiresIn   int    `json:"expires_in"`
+}
+
+type mfaRequiredResponse struct {
+        MFARequired  bool   `json:"mfa_required"`
+        MFASessionID string `json:"mfa_session_id"`
+}
+
+// Login handles POST /auth/login.
+func (h *LoginHandler) Login(w http.ResponseWriter, r *http.Request) <span class="cov9" title="18">{
+        var req loginRequest
+        if err := json.NewDecoder(r.Body).Decode(&amp;req); err != nil </span><span class="cov1" title="1">{
+                writeError(w, http.StatusBadRequest, "invalid request body")
+                return
+        }</span>
+
+        <span class="cov9" title="17">req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+        if req.Email == "" || req.Password == "" </span><span class="cov3" title="2">{
+                writeError(w, http.StatusBadRequest, "email and password are required")
+                return
+        }</span>
+
+        <span class="cov9" title="15">u, err := h.users.FindByEmail(req.Email)
+        if err != nil </span><span class="cov1" title="1">{
+                // Generic error — don't reveal whether email exists
+                writeError(w, http.StatusUnauthorized, "invalid credentials")
+                return
+        }</span>
+
+        // Check account lockout
+        <span class="cov9" title="14">if u.LockedUntil != nil &amp;&amp; time.Now().Before(*u.LockedUntil) </span><span class="cov3" title="2">{
+                writeError(w, http.StatusForbidden, "account is temporarily locked")
+                return
+        }</span>
+
+        // Verify password
+        <span class="cov8" title="12">if err := VerifyPassword(req.Password, h.pepper, u.PasswordHash); err != nil </span><span class="cov6" title="6">{
+                log.Warn().
+                        Str("email", u.Email).
+                        Str("ip", r.RemoteAddr).
+                        Msg("failed login attempt")
+                h.handleFailedAttempt(r.Context(), u)
+                writeError(w, http.StatusUnauthorized, "invalid credentials")
+                return
+        }</span>
+
+        // Successful authentication — reset failed attempts
+        <span class="cov6" title="6">if err := h.tokens.ResetLoginAttempts(r.Context(), u.ID.String()); err != nil </span><span class="cov0" title="0">{
+                log.Warn().Err(err).Str("user_id", u.ID.String()).Msg("failed to reset login attempts in Redis")
+        }</span>
+        <span class="cov6" title="6">if u.FailedAttempts &gt; 0 </span><span class="cov1" title="1">{
+                if err := h.users.UpdateFailedAttemptsReset(u.ID); err != nil </span><span class="cov0" title="0">{
+                        log.Warn().Err(err).Str("user_id", u.ID.String()).Msg("failed to reset failed attempts counter")
+                }</span>
+        }
+
+        // If MFA is enabled, issue an intermediate session token instead of tokens
+        <span class="cov6" title="6">if u.TOTPEnabled </span><span class="cov1" title="1">{
+                mfaToken := randomToken(32)
+                if err := h.tokens.StoreMFASession(r.Context(), mfaToken, u.ID.String(), 5*time.Minute); err != nil </span><span class="cov0" title="0">{
+                        writeError(w, http.StatusInternalServerError, "failed to create mfa session")
+                        return
+                }</span>
+                <span class="cov1" title="1">writeJSON(w, http.StatusOK, mfaRequiredResponse{
+                        MFARequired:  true,
+                        MFASessionID: mfaToken,
+                })
+                return</span>
+        }
+
+        <span class="cov5" title="5">h.issueTokenPair(w, r, u)</span>
+}
+
+// Refresh handles POST /auth/token/refresh.
+func (h *LoginHandler) Refresh(w http.ResponseWriter, r *http.Request) <span class="cov6" title="6">{
+        cookie, err := r.Cookie(refreshCookieName)
+        if err != nil </span><span class="cov1" title="1">{
+                writeError(w, http.StatusUnauthorized, "refresh token missing")
+                return
+        }</span>
+
+        <span class="cov5" title="5">userIDStr, err := h.tokens.ConsumeRefreshToken(r.Context(), cookie.Value)
+        if err != nil </span><span class="cov1" title="1">{
+                // Token not found — possible reuse attack: revoke all sessions
+                // We can't know the userID here, so just return 401
+                writeError(w, http.StatusUnauthorized, "invalid or expired refresh token")
+                return
+        }</span>
+
+        <span class="cov5" title="4">userID, err := uuid.Parse(userIDStr)
+        if err != nil </span><span class="cov1" title="1">{
+                writeError(w, http.StatusInternalServerError, "malformed session data")
+                return
+        }</span>
+
+        // Look up user to get current claims
+        <span class="cov4" title="3">u, err := h.findUserByID(r.Context(), userID)
+        if err != nil </span><span class="cov3" title="2">{
+                writeError(w, http.StatusUnauthorized, "user not found")
+                return
+        }</span>
+
+        <span class="cov1" title="1">h.issueTokenPair(w, r, u)</span>
+}
+
+// issueTokenPair issues a JWT access token and rotates the refresh token cookie.
+func (h *LoginHandler) issueTokenPair(w http.ResponseWriter, r *http.Request, u *user.User) <span class="cov6" title="6">{
+        accessToken, err := h.jwt.IssueAccessToken(u.ID.String(), u.Email, u.EmailVerified, h.issuer)
+        if err != nil </span><span class="cov1" title="1">{
+                writeError(w, http.StatusInternalServerError, "failed to issue access token")
+                return
+        }</span>
+
+        <span class="cov5" title="5">refreshToken := randomToken(32)
+        if err := h.tokens.StoreRefreshToken(r.Context(), refreshToken, u.ID.String(), refreshTokenTTL); err != nil </span><span class="cov1" title="1">{
+                writeError(w, http.StatusInternalServerError, "failed to store refresh token")
+                return
+        }</span>
+
+        <span class="cov5" title="4">setRefreshCookie(w, refreshToken)
+
+        writeJSON(w, http.StatusOK, loginResponse{
+                AccessToken: accessToken,
+                TokenType:   "Bearer",
+                ExpiresIn:   900, // 15 minutes in seconds
+        })</span>
+}
+
+// handleFailedAttempt increments the failure counter and locks the account if threshold reached.
+func (h *LoginHandler) handleFailedAttempt(ctx context.Context, u *user.User) <span class="cov6" title="6">{
+        count, err := h.tokens.IncrLoginAttempts(ctx, u.ID.String())
+        if err != nil </span><span class="cov0" title="0">{
+                return
+        }</span>
+
+        <span class="cov6" title="6">newAttempts := int(count)
+        var lockedUntil *time.Time
+
+        if count &gt;= int64(MaxLoginAttempts()) </span><span class="cov1" title="1">{
+                t := time.Now().Add(LockoutDuration())
+                lockedUntil = &amp;t
+                log.Warn().
+                        Str("user_id", u.ID.String()).
+                        Str("email", u.Email).
+                        Msg("account locked due to excessive failed login attempts")
+                unlockURL := fmt.Sprintf("%s/auth/unlock", h.baseURL)
+                go func() </span><span class="cov1" title="1">{
+                        if err := h.mailer.SendAccountLocked(u.Email, unlockURL); err != nil </span><span class="cov0" title="0">{
+                                log.Warn().Err(err).Str("email", u.Email).Msg("failed to send account locked email")
+                        }</span>
+                }()
+        }
+
+        <span class="cov6" title="6">if err := h.users.UpdateFailedAttempts(u.ID, newAttempts, lockedUntil); err != nil </span><span class="cov0" title="0">{
+                log.Warn().Err(err).Str("user_id", u.ID.String()).Msg("failed to persist failed attempt count")
+        }</span>
+}
+
+// findUserByID is a helper to look up a user by UUID. LoginRepository uses email lookups;
+// we need a FindByID for the refresh flow. We store it as an optional interface upgrade.
+func (h *LoginHandler) findUserByID(ctx context.Context, id uuid.UUID) (*user.User, error) <span class="cov4" title="3">{
+        type byID interface {
+                FindByID(id uuid.UUID) (*user.User, error)
+        }
+        if repo, ok := h.users.(byID); ok </span><span class="cov3" title="2">{
+                return repo.FindByID(id)
+        }</span>
+        <span class="cov1" title="1">return nil, fmt.Errorf("FindByID not supported by this repository")</span>
+}
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">package auth
+
+import (
+        "context"
+        "encoding/json"
+        "net/http"
+
+        "github.com/rs/zerolog/log"
+)
+
+// LogoutTokenStore is the TokenStore subset needed by LogoutHandler.
+type LogoutTokenStore interface {
+        ConsumeRefreshToken(ctx context.Context, token string) (string, error)
+        RevokeAllUserSessions(ctx context.Context, userID string) error
+}
+
+// BackChannelNotifier sends logout notifications to registered relying parties.
+// Implementations must be safe to call from a goroutine.
+type BackChannelNotifier interface {
+        NotifyLogout(ctx context.Context, userID string, logoutToken string) error
+}
+
+// LogoutHandler handles POST /auth/logout.
+type LogoutHandler struct {
+        tokens   LogoutTokenStore
+        jwt      *TokenService
+        notifier BackChannelNotifier // optional; nil disables back-channel notifications
+}
+
+func NewLogoutHandler(tokens *TokenStore, jwt *TokenService, notifier BackChannelNotifier) *LogoutHandler <span class="cov0" title="0">{
+        return &amp;LogoutHandler{tokens: tokens, jwt: jwt, notifier: notifier}
+}</span>
+
+// Logout handles POST /auth/logout — deletes refresh token, clears cookie.
+// Idempotent: always returns 200 even if session not found.
+func (h *LogoutHandler) Logout(w http.ResponseWriter, r *http.Request) <span class="cov10" title="4">{
+        cookie, err := r.Cookie(refreshCookieName)
+        if err == nil &amp;&amp; cookie.Value != "" </span><span class="cov5" title="2">{
+                userIDStr, err := h.tokens.ConsumeRefreshToken(r.Context(), cookie.Value)
+                if err == nil &amp;&amp; h.notifier != nil </span><span class="cov0" title="0">{
+                        go h.backChannelLogout(r.Context(), userIDStr)
+                }</span>
+        }
+
+        <span class="cov10" title="4">clearRefreshCookie(w)
+        w.WriteHeader(http.StatusOK)</span>
+}
+
+// backChannelLogout issues a signed logout token and notifies all relying parties.
+func (h *LogoutHandler) backChannelLogout(ctx context.Context, userIDStr string) <span class="cov0" title="0">{
+        logoutToken, err := h.jwt.IssueAccessToken(userIDStr, "", false, "logout")
+        if err != nil </span><span class="cov0" title="0">{
+                log.Warn().Err(err).Str("user_id", userIDStr).Msg("back-channel logout: failed to issue logout token")
+                return
+        }</span>
+
+        <span class="cov0" title="0">if err := h.notifier.NotifyLogout(ctx, userIDStr, logoutToken); err != nil </span><span class="cov0" title="0">{
+                log.Warn().Err(err).Str("user_id", userIDStr).Msg("back-channel logout: notification failed")
+        }</span>
+}
+
+// RevokeAll handles POST /auth/logout/all — revokes all sessions for the authenticated user.
+func (h *LogoutHandler) RevokeAll(w http.ResponseWriter, r *http.Request) <span class="cov5" title="2">{
+        userIDStr, ok := UserIDFromContext(r.Context())
+        if !ok </span><span class="cov1" title="1">{
+                w.WriteHeader(http.StatusOK)
+                return
+        }</span>
+        <span class="cov1" title="1">if err := h.tokens.RevokeAllUserSessions(r.Context(), userIDStr); err != nil </span><span class="cov0" title="0">{
+                log.Warn().Err(err).Str("user_id", userIDStr).Msg("failed to revoke all sessions")
+        }</span>
+        <span class="cov1" title="1">clearRefreshCookie(w)
+        w.WriteHeader(http.StatusOK)</span>
+}
+
+// BackChannelLogoutReceiver handles POST /auth/backchannel-logout from external IdPs.
+func BackChannelLogoutReceiver(tokens *TokenStore) http.HandlerFunc <span class="cov5" title="2">{
+        return func(w http.ResponseWriter, r *http.Request) </span><span class="cov5" title="2">{
+                var body struct {
+                        LogoutToken string `json:"logout_token"`
+                }
+                if err := json.NewDecoder(r.Body).Decode(&amp;body); err != nil </span><span class="cov1" title="1">{
+                        w.WriteHeader(http.StatusBadRequest)
+                        return
+                }</span>
+                // In production: verify the logout token signature, extract sub, revoke sessions.
+                <span class="cov1" title="1">_ = body.LogoutToken
+                w.WriteHeader(http.StatusOK)</span>
+        }
+}
+</pre>
+		
+		<pre class="file" id="file6" style="display: none">package auth
+
+import (
+        "crypto/rand"
+        "crypto/subtle"
+        "encoding/base64"
+        "errors"
+        "fmt"
+        "strings"
+        "unicode"
+
+        "golang.org/x/crypto/argon2"
+)
+
+const (
+        argonMemory  = 64 * 1024 // 64 MB
+        argonTime    = 3
+        argonThreads = 4
+        argonKeyLen  = 32
+        argonSaltLen = 16
+)
+
+var (
+        ErrWeakPassword = errors.New("password does not meet policy requirements")
+        ErrInvalidHash  = errors.New("invalid password hash format")
+        ErrHashMismatch = errors.New("password does not match")
+)
+
+// PolicyViolation describes an unmet password policy criterion.
+type PolicyViolation struct {
+        Rule    string `json:"rule"`
+        Message string `json:"message"`
+}
+
+// ValidatePasswordPolicy checks the password against the security policy.
+// Returns a list of unmet criteria (empty = valid).
+func ValidatePasswordPolicy(password string) []PolicyViolation <span class="cov6" title="23">{
+        var violations []PolicyViolation
+
+        if len(password) &lt; 12 </span><span class="cov3" title="6">{
+                violations = append(violations, PolicyViolation{"min_length", "minimum 12 characters required"})
+        }</span>
+
+        <span class="cov6" title="23">var hasUpper, hasLower, hasDigit, hasSpecial bool
+        for _, r := range password </span><span class="cov10" title="270">{
+                switch </span>{
+                case unicode.IsUpper(r):<span class="cov7" title="52">
+                        hasUpper = true</span>
+                case unicode.IsLower(r):<span class="cov9" title="178">
+                        hasLower = true</span>
+                case unicode.IsDigit(r):<span class="cov5" title="21">
+                        hasDigit = true</span>
+                case !unicode.IsLetter(r) &amp;&amp; !unicode.IsDigit(r):<span class="cov5" title="19">
+                        hasSpecial = true</span>
+                }
+        }
+
+        <span class="cov6" title="23">if !hasUpper </span><span class="cov3" title="5">{
+                violations = append(violations, PolicyViolation{"uppercase", "at least one uppercase letter required"})
+        }</span>
+        <span class="cov6" title="23">if !hasLower </span><span class="cov1" title="1">{
+                violations = append(violations, PolicyViolation{"lowercase", "at least one lowercase letter required"})
+        }</span>
+        <span class="cov6" title="23">if !hasDigit </span><span class="cov3" title="5">{
+                violations = append(violations, PolicyViolation{"digit", "at least one digit required"})
+        }</span>
+        <span class="cov6" title="23">if !hasSpecial </span><span class="cov3" title="6">{
+                violations = append(violations, PolicyViolation{"special", "at least one special character required"})
+        }</span>
+
+        <span class="cov6" title="23">return violations</span>
+}
+
+// HashPassword hashes password+pepper with Argon2id and returns a storable string.
+func HashPassword(password, pepper string) (string, error) <span class="cov7" title="54">{
+        salt := make([]byte, argonSaltLen)
+        if _, err := rand.Read(salt); err != nil </span><span class="cov0" title="0">{
+                return "", fmt.Errorf("generating salt: %w", err)
+        }</span>
+
+        <span class="cov7" title="54">hash := argon2.IDKey(
+                []byte(password+pepper),
+                salt,
+                argonTime,
+                argonMemory,
+                argonThreads,
+                argonKeyLen,
+        )
+
+        // Format: $argon2id$v=19$m=65536,t=3,p=4$&lt;salt&gt;$&lt;hash&gt;
+        encoded := fmt.Sprintf(
+                "$argon2id$v=%d$m=%d,t=%d,p=%d$%s$%s",
+                argon2.Version,
+                argonMemory,
+                argonTime,
+                argonThreads,
+                base64.RawStdEncoding.EncodeToString(salt),
+                base64.RawStdEncoding.EncodeToString(hash),
+        )
+
+        return encoded, nil</span>
+}
+
+// VerifyPassword checks a password+pepper against a stored Argon2id hash.
+// Uses constant-time comparison to prevent timing attacks.
+//
+// Expected format: $argon2id$v=&lt;v&gt;$m=&lt;m&gt;,t=&lt;t&gt;,p=&lt;p&gt;$&lt;salt_base64&gt;$&lt;hash_base64&gt;
+func VerifyPassword(password, pepper, encodedHash string) error <span class="cov6" title="26">{
+        // Split on $ — produces ["", "argon2id", "v=19", "m=65536,t=3,p=4", "&lt;salt&gt;", "&lt;hash&gt;"]
+        parts := strings.SplitN(encodedHash, "$", 6)
+        if len(parts) != 6 || parts[0] != "" || parts[1] != "argon2id" </span><span class="cov3" title="4">{
+                return ErrInvalidHash
+        }</span>
+
+        <span class="cov5" title="22">var version uint32
+        if _, err := fmt.Sscanf(parts[2], "v=%d", &amp;version); err != nil </span><span class="cov1" title="1">{
+                return ErrInvalidHash
+        }</span>
+
+        <span class="cov5" title="21">var memory, timeCost, threads uint32
+        if _, err := fmt.Sscanf(parts[3], "m=%d,t=%d,p=%d", &amp;memory, &amp;timeCost, &amp;threads); err != nil </span><span class="cov1" title="1">{
+                return ErrInvalidHash
+        }</span>
+
+        <span class="cov5" title="20">salt, err := base64.RawStdEncoding.DecodeString(parts[4])
+        if err != nil </span><span class="cov1" title="1">{
+                return ErrInvalidHash
+        }</span>
+        <span class="cov5" title="19">expectedHash, err := base64.RawStdEncoding.DecodeString(parts[5])
+        if err != nil </span><span class="cov1" title="1">{
+                return ErrInvalidHash
+        }</span>
+
+        <span class="cov5" title="18">computed := argon2.IDKey(
+                []byte(password+pepper),
+                salt,
+                timeCost,
+                memory,
+                uint8(threads),
+                uint32(len(expectedHash)),
+        )
+
+        if subtle.ConstantTimeCompare(computed, expectedHash) != 1 </span><span class="cov4" title="8">{
+                return ErrHashMismatch
+        }</span>
+
+        <span class="cov4" title="10">return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file7" style="display: none">package auth
+
+import (
+        "context"
+        "encoding/json"
+        "fmt"
+        "net/http"
+        "strings"
+        "time"
+
+        "github.com/google/uuid"
+        "github.com/otaviano/braza-sso/internal/email"
+        "github.com/otaviano/braza-sso/internal/user"
+        "github.com/rs/zerolog/log"
+)
+
+const passwordResetTTL = 1 * time.Hour
+
+// PasswordResetRepository is the user.Repository subset needed for password reset.
+type PasswordResetRepository interface {
+        FindByEmail(email string) (*user.User, error)
+        UpdatePassword(id uuid.UUID, hash string) error
+}
+
+// PasswordResetTokenStore is the TokenStore subset needed for password reset.
+type PasswordResetTokenStore interface {
+        CreatePasswordResetToken(ctx context.Context, userID string, ttl time.Duration) (string, error)
+        ConsumePasswordResetToken(ctx context.Context, token string) (string, error)
+        RevokeAllUserSessions(ctx context.Context, userID string) error
+}
+
+// PasswordResetHandler handles POST /auth/password/reset-request and POST /auth/password/reset.
+type PasswordResetHandler struct {
+        users   PasswordResetRepository
+        tokens  PasswordResetTokenStore
+        mailer  email.Sender
+        pepper  string
+        baseURL string
+}
+
+func NewPasswordResetHandler(
+        users *user.Repository,
+        tokens *TokenStore,
+        mailer email.Sender,
+        pepper, baseURL string,
+) *PasswordResetHandler <span class="cov0" title="0">{
+        return &amp;PasswordResetHandler{
+                users:   users,
+                tokens:  tokens,
+                mailer:  mailer,
+                pepper:  pepper,
+                baseURL: baseURL,
+        }
+}</span>
+
+// NewPasswordResetHandlerWithDeps creates a handler with injected dependencies (for testing).
+func NewPasswordResetHandlerWithDeps(
+        users PasswordResetRepository,
+        tokens PasswordResetTokenStore,
+        mailer email.Sender,
+        pepper, baseURL string,
+) *PasswordResetHandler <span class="cov10" title="11">{
+        return &amp;PasswordResetHandler{
+                users:   users,
+                tokens:  tokens,
+                mailer:  mailer,
+                pepper:  pepper,
+                baseURL: baseURL,
+        }
+}</span>
+
+type resetRequestBody struct {
+        Email string `json:"email"`
+}
+
+// ResetRequest handles POST /auth/password/reset-request.
+// Always returns 200 to prevent email enumeration.
+func (h *PasswordResetHandler) ResetRequest(w http.ResponseWriter, r *http.Request) <span class="cov5" title="3">{
+        var req resetRequestBody
+        if err := json.NewDecoder(r.Body).Decode(&amp;req); err != nil </span><span class="cov1" title="1">{
+                w.WriteHeader(http.StatusOK)
+                return
+        }</span>
+
+        <span class="cov3" title="2">req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+
+        u, err := h.users.FindByEmail(req.Email)
+        if err != nil </span><span class="cov1" title="1">{
+                // User not found — return 200 silently
+                w.WriteHeader(http.StatusOK)
+                return
+        }</span>
+
+        <span class="cov1" title="1">token, err := h.tokens.CreatePasswordResetToken(r.Context(), u.ID.String(), passwordResetTTL)
+        if err != nil </span><span class="cov0" title="0">{
+                w.WriteHeader(http.StatusOK)
+                return
+        }</span>
+
+        <span class="cov1" title="1">resetURL := fmt.Sprintf("%s/auth/password/reset?token=%s", h.baseURL, token)
+        go func() </span><span class="cov1" title="1">{
+                if err := h.mailer.SendPasswordReset(u.Email, resetURL); err != nil </span><span class="cov0" title="0">{
+                        log.Warn().Err(err).Str("email", u.Email).Msg("failed to send password reset email")
+                }</span>
+        }()
+
+        <span class="cov1" title="1">w.WriteHeader(http.StatusOK)</span>
+}
+
+type resetBody struct {
+        Token    string `json:"token"`
+        Password string `json:"password"`
+}
+
+// Reset handles POST /auth/password/reset.
+func (h *PasswordResetHandler) Reset(w http.ResponseWriter, r *http.Request) <span class="cov8" title="8">{
+        var req resetBody
+        if err := json.NewDecoder(r.Body).Decode(&amp;req); err != nil </span><span class="cov1" title="1">{
+                writeError(w, http.StatusBadRequest, "invalid request body")
+                return
+        }</span>
+
+        <span class="cov8" title="7">if req.Token == "" </span><span class="cov1" title="1">{
+                writeError(w, http.StatusBadRequest, "token is required")
+                return
+        }</span>
+
+        <span class="cov7" title="6">violations := ValidatePasswordPolicy(req.Password)
+        if len(violations) &gt; 0 </span><span class="cov1" title="1">{
+                msgs := make([]string, len(violations))
+                for i, v := range violations </span><span class="cov6" title="4">{
+                        msgs[i] = v.Message
+                }</span>
+                <span class="cov1" title="1">writeJSON(w, http.StatusUnprocessableEntity, map[string]interface{}{
+                        "error":      "password does not meet policy requirements",
+                        "violations": msgs,
+                })
+                return</span>
+        }
+
+        <span class="cov7" title="5">userIDStr, err := h.tokens.ConsumePasswordResetToken(r.Context(), req.Token)
+        if err != nil </span><span class="cov3" title="2">{
+                writeError(w, http.StatusBadRequest, "token not found or expired")
+                return
+        }</span>
+
+        <span class="cov5" title="3">userID, err := uuid.Parse(userIDStr)
+        if err != nil </span><span class="cov1" title="1">{
+                writeError(w, http.StatusInternalServerError, "invalid stored user id")
+                return
+        }</span>
+
+        <span class="cov3" title="2">hash, err := HashPassword(req.Password, h.pepper)
+        if err != nil </span><span class="cov0" title="0">{
+                writeError(w, http.StatusInternalServerError, "failed to hash password")
+                return
+        }</span>
+
+        <span class="cov3" title="2">if err := h.users.UpdatePassword(userID, hash); err != nil </span><span class="cov0" title="0">{
+                writeError(w, http.StatusInternalServerError, "failed to update password")
+                return
+        }</span>
+
+        // Invalidate all active sessions so stolen refresh tokens are revoked
+        <span class="cov3" title="2">if err := h.tokens.RevokeAllUserSessions(r.Context(), userIDStr); err != nil </span><span class="cov0" title="0">{
+                log.Warn().Err(err).Str("user_id", userIDStr).Msg("failed to revoke sessions after password reset")
+        }</span>
+
+        <span class="cov3" title="2">writeJSON(w, http.StatusOK, map[string]string{"message": "password updated"})</span>
+}
+</pre>
+		
+		<pre class="file" id="file8" style="display: none">package auth
+
+import (
+        "context"
+        "encoding/json"
+        "fmt"
+        "net/http"
+        "strings"
+        "time"
+
+        "github.com/google/uuid"
+        "github.com/otaviano/braza-sso/internal/email"
+        "github.com/otaviano/braza-sso/internal/user"
+        "github.com/rs/zerolog/log"
+)
+
+const emailVerifyTTL = 24 * time.Hour
+
+// UserRepository is the subset of user.Repository used by RegistrationHandler.
+type UserRepository interface {
+        Create(u *user.User) error
+        FindByEmail(email string) (*user.User, error)
+        SetEmailVerified(id uuid.UUID) error
+}
+
+// EmailVerificationStore is the subset of TokenStore used for email verification.
+type EmailVerificationStore interface {
+        CreateEmailVerificationToken(ctx context.Context, userID string, ttl time.Duration) (string, error)
+        ConsumeEmailVerificationToken(ctx context.Context, token string) (string, error)
+}
+
+// RegistrationHandler handles POST /auth/register and related verification endpoints.
+type RegistrationHandler struct {
+        users   UserRepository
+        tokens  EmailVerificationStore
+        mailer  email.Sender
+        pepper  string
+        baseURL string
+}
+
+func NewRegistrationHandler(
+        users *user.Repository,
+        tokens *TokenStore,
+        mailer email.Sender,
+        pepper, baseURL string,
+) *RegistrationHandler <span class="cov0" title="0">{
+        return &amp;RegistrationHandler{
+                users:   users,
+                tokens:  tokens,
+                mailer:  mailer,
+                pepper:  pepper,
+                baseURL: baseURL,
+        }
+}</span>
+
+// NewRegistrationHandlerWithDeps creates a handler with injected dependencies (for testing).
+func NewRegistrationHandlerWithDeps(
+        users UserRepository,
+        tokens EmailVerificationStore,
+        mailer email.Sender,
+        pepper, baseURL string,
+) *RegistrationHandler <span class="cov7" title="17">{
+        return &amp;RegistrationHandler{
+                users:   users,
+                tokens:  tokens,
+                mailer:  mailer,
+                pepper:  pepper,
+                baseURL: baseURL,
+        }
+}</span>
+
+type registerRequest struct {
+        Email    string `json:"email"`
+        Password string `json:"password"`
+}
+
+// Register handles POST /auth/register.
+func (h *RegistrationHandler) Register(w http.ResponseWriter, r *http.Request) <span class="cov5" title="8">{
+        var req registerRequest
+        if err := json.NewDecoder(r.Body).Decode(&amp;req); err != nil </span><span class="cov1" title="1">{
+                writeError(w, http.StatusBadRequest, "invalid request body")
+                return
+        }</span>
+
+        <span class="cov5" title="7">req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+        if req.Email == "" </span><span class="cov1" title="1">{
+                writeError(w, http.StatusBadRequest, "email is required")
+                return
+        }</span>
+
+        <span class="cov4" title="6">violations := ValidatePasswordPolicy(req.Password)
+        if len(violations) &gt; 0 </span><span class="cov1" title="1">{
+                msgs := make([]string, len(violations))
+                for i, v := range violations </span><span class="cov3" title="4">{
+                        msgs[i] = v.Message
+                }</span>
+                <span class="cov1" title="1">writeJSON(w, http.StatusUnprocessableEntity, map[string]interface{}{
+                        "error":      "password does not meet policy requirements",
+                        "violations": msgs,
+                })
+                return</span>
+        }
+
+        <span class="cov4" title="5">hash, err := HashPassword(req.Password, h.pepper)
+        if err != nil </span><span class="cov0" title="0">{
+                writeError(w, http.StatusInternalServerError, "failed to process password")
+                return
+        }</span>
+
+        <span class="cov4" title="5">u := &amp;user.User{
+                ID:            uuid.New(),
+                Email:         req.Email,
+                PasswordHash:  hash,
+                EmailVerified: false,
+        }
+
+        if err := h.users.Create(u); err != nil </span><span class="cov1" title="1">{
+                if err == user.ErrEmailTaken </span><span class="cov1" title="1">{
+                        // Silently return 201 to prevent email enumeration
+                        w.WriteHeader(http.StatusCreated)
+                        return
+                }</span>
+                <span class="cov0" title="0">log.Error().Err(err).Str("email", u.Email).Msg("user creation failed")
+                writeError(w, http.StatusInternalServerError, "failed to create account")
+                return</span>
+        }
+
+        <span class="cov3" title="4">token, err := h.tokens.CreateEmailVerificationToken(r.Context(), u.ID.String(), emailVerifyTTL)
+        if err != nil </span><span class="cov1" title="1">{
+                // Account created; email will be resent on demand
+                w.WriteHeader(http.StatusCreated)
+                return
+        }</span>
+
+        <span class="cov3" title="3">verifyURL := fmt.Sprintf("%s/auth/verify-email?token=%s", h.baseURL, token)
+        // Fire-and-forget; don't fail registration if email delivery fails
+        go func() </span><span class="cov3" title="3">{
+                if err := h.mailer.SendVerification(u.Email, verifyURL); err != nil </span><span class="cov0" title="0">{
+                        log.Warn().Err(err).Str("email", u.Email).Msg("failed to send verification email")
+                }</span>
+        }()
+
+        <span class="cov3" title="3">w.WriteHeader(http.StatusCreated)</span>
+}
+
+// VerifyEmail handles GET /auth/verify-email?token=&lt;token&gt;.
+func (h *RegistrationHandler) VerifyEmail(w http.ResponseWriter, r *http.Request) <span class="cov5" title="7">{
+        token := r.URL.Query().Get("token")
+        if token == "" </span><span class="cov1" title="1">{
+                writeError(w, http.StatusBadRequest, "token is required")
+                return
+        }</span>
+
+        <span class="cov4" title="6">userIDStr, err := h.tokens.ConsumeEmailVerificationToken(r.Context(), token)
+        if err != nil </span><span class="cov2" title="2">{
+                writeError(w, http.StatusBadRequest, "token not found or expired")
+                return
+        }</span>
+
+        <span class="cov3" title="4">userID, err := uuid.Parse(userIDStr)
+        if err != nil </span><span class="cov1" title="1">{
+                writeError(w, http.StatusInternalServerError, "invalid stored user id")
+                return
+        }</span>
+
+        <span class="cov3" title="3">if err := h.users.SetEmailVerified(userID); err != nil </span><span class="cov1" title="1">{
+                writeError(w, http.StatusInternalServerError, "failed to verify email")
+                return
+        }</span>
+
+        <span class="cov2" title="2">writeJSON(w, http.StatusOK, map[string]string{"message": "email verified"})</span>
+}
+
+type resendRequest struct {
+        Email string `json:"email"`
+}
+
+// ResendVerification handles POST /auth/resend-verification.
+func (h *RegistrationHandler) ResendVerification(w http.ResponseWriter, r *http.Request) <span class="cov3" title="4">{
+        var req resendRequest
+        if err := json.NewDecoder(r.Body).Decode(&amp;req); err != nil </span><span class="cov1" title="1">{
+                writeError(w, http.StatusBadRequest, "invalid request body")
+                return
+        }</span>
+
+        <span class="cov3" title="3">req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+
+        // Always return 200 to prevent email enumeration
+        u, err := h.users.FindByEmail(req.Email)
+        if err != nil || u.EmailVerified </span><span class="cov2" title="2">{
+                w.WriteHeader(http.StatusOK)
+                return
+        }</span>
+
+        <span class="cov1" title="1">token, err := h.tokens.CreateEmailVerificationToken(r.Context(), u.ID.String(), emailVerifyTTL)
+        if err != nil </span><span class="cov0" title="0">{
+                w.WriteHeader(http.StatusOK)
+                return
+        }</span>
+
+        <span class="cov1" title="1">verifyURL := fmt.Sprintf("%s/auth/verify-email?token=%s", h.baseURL, token)
+        go func() </span><span class="cov1" title="1">{
+                if err := h.mailer.SendVerification(u.Email, verifyURL); err != nil </span><span class="cov0" title="0">{
+                        log.Warn().Err(err).Str("email", u.Email).Msg("failed to resend verification email")
+                }</span>
+        }()
+
+        <span class="cov1" title="1">w.WriteHeader(http.StatusOK)</span>
+}
+
+// writeError writes a JSON error response.
+func writeError(w http.ResponseWriter, status int, msg string) <span class="cov9" title="51">{
+        writeJSON(w, status, map[string]string{"error": msg})
+}</span>
+
+// writeJSON encodes v as JSON and writes it with the given status.
+func writeJSON(w http.ResponseWriter, status int, v interface{}) <span class="cov10" title="69">{
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(status)
+        _ = json.NewEncoder(w).Encode(v)
+}</span>
+</pre>
+		
+		<pre class="file" id="file9" style="display: none">package auth
+
+import (
+        "context"
+        "crypto/rand"
+        "encoding/base64"
+        "fmt"
+        "time"
+
+        "github.com/redis/go-redis/v9"
+)
+
+const (
+        prefixEmailVerify    = "email_verify:"
+        prefixPasswordReset  = "pwd_reset:"
+        prefixRefreshToken   = "refresh:"
+        prefixUserSessions   = "user_sessions:"
+        prefixMFASession     = "mfa_session:"
+        prefixRateLimit      = "rate:"
+        prefixLoginAttempts  = "login_attempts:"
+)
+
+const (
+        maxLoginAttempts    = 5
+        loginAttemptWindow  = 15 * time.Minute
+        lockoutDuration     = 30 * time.Minute
+)
+
+// ErrTokenNotFound is returned when a token does not exist or has expired.
+var ErrTokenNotFound = fmt.Errorf("token not found or expired")
+
+// TokenStore manages short-lived tokens in Redis.
+type TokenStore struct {
+        redis *redis.Client
+}
+
+func NewTokenStore(r *redis.Client) *TokenStore <span class="cov0" title="0">{
+        return &amp;TokenStore{redis: r}
+}</span>
+
+// CreateEmailVerificationToken generates a secure token and stores it in Redis.
+func (ts *TokenStore) CreateEmailVerificationToken(ctx context.Context, userID string, ttl time.Duration) (string, error) <span class="cov0" title="0">{
+        token := randomToken(32)
+        key := prefixEmailVerify + token
+        return token, ts.redis.Set(ctx, key, userID, ttl).Err()
+}</span>
+
+// ConsumeEmailVerificationToken validates and deletes the token, returning the userID.
+func (ts *TokenStore) ConsumeEmailVerificationToken(ctx context.Context, token string) (string, error) <span class="cov0" title="0">{
+        key := prefixEmailVerify + token
+        userID, err := ts.redis.GetDel(ctx, key).Result()
+        if err == redis.Nil </span><span class="cov0" title="0">{
+                return "", ErrTokenNotFound
+        }</span>
+        <span class="cov0" title="0">return userID, err</span>
+}
+
+// CreatePasswordResetToken generates a secure token and stores it in Redis.
+func (ts *TokenStore) CreatePasswordResetToken(ctx context.Context, userID string, ttl time.Duration) (string, error) <span class="cov0" title="0">{
+        token := randomToken(32)
+        key := prefixPasswordReset + token
+        return token, ts.redis.Set(ctx, key, userID, ttl).Err()
+}</span>
+
+// ConsumePasswordResetToken validates and deletes the token, returning the userID.
+func (ts *TokenStore) ConsumePasswordResetToken(ctx context.Context, token string) (string, error) <span class="cov0" title="0">{
+        key := prefixPasswordReset + token
+        userID, err := ts.redis.GetDel(ctx, key).Result()
+        if err == redis.Nil </span><span class="cov0" title="0">{
+                return "", fmt.Errorf("token not found or expired")
+        }</span>
+        <span class="cov0" title="0">return userID, err</span>
+}
+
+// StoreRefreshToken stores an opaque refresh token linked to a userID.
+func (ts *TokenStore) StoreRefreshToken(ctx context.Context, token, userID string, ttl time.Duration) error <span class="cov0" title="0">{
+        key := prefixRefreshToken + token
+        if err := ts.redis.Set(ctx, key, userID, ttl).Err(); err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        // Track per-user sessions for full revocation
+        <span class="cov0" title="0">return ts.redis.SAdd(ctx, prefixUserSessions+userID, token).Err()</span>
+}
+
+// ConsumeRefreshToken validates and atomically deletes a refresh token.
+func (ts *TokenStore) ConsumeRefreshToken(ctx context.Context, token string) (string, error) <span class="cov0" title="0">{
+        key := prefixRefreshToken + token
+        userID, err := ts.redis.GetDel(ctx, key).Result()
+        if err == redis.Nil </span><span class="cov0" title="0">{
+                return "", fmt.Errorf("refresh token not found or expired")
+        }</span>
+        <span class="cov0" title="0">if err != nil </span><span class="cov0" title="0">{
+                return "", err
+        }</span>
+        <span class="cov0" title="0">ts.redis.SRem(ctx, prefixUserSessions+userID, token)
+        return userID, nil</span>
+}
+
+// RevokeAllUserSessions deletes every refresh token for a user (token reuse detection).
+func (ts *TokenStore) RevokeAllUserSessions(ctx context.Context, userID string) error <span class="cov0" title="0">{
+        setKey := prefixUserSessions + userID
+        tokens, err := ts.redis.SMembers(ctx, setKey).Result()
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov0" title="0">pipe := ts.redis.Pipeline()
+        for _, t := range tokens </span><span class="cov0" title="0">{
+                pipe.Del(ctx, prefixRefreshToken+t)
+        }</span>
+        <span class="cov0" title="0">pipe.Del(ctx, setKey)
+        _, err = pipe.Exec(ctx)
+        return err</span>
+}
+
+// StoreMFASession stores an intermediate MFA session token.
+func (ts *TokenStore) StoreMFASession(ctx context.Context, token, userID string, ttl time.Duration) error <span class="cov0" title="0">{
+        return ts.redis.Set(ctx, prefixMFASession+token, userID, ttl).Err()
+}</span>
+
+// ConsumeMFASession validates and deletes an MFA session token.
+func (ts *TokenStore) ConsumeMFASession(ctx context.Context, token string) (string, error) <span class="cov0" title="0">{
+        userID, err := ts.redis.GetDel(ctx, prefixMFASession+token).Result()
+        if err == redis.Nil </span><span class="cov0" title="0">{
+                return "", fmt.Errorf("mfa session not found or expired")
+        }</span>
+        <span class="cov0" title="0">return userID, err</span>
+}
+
+// SetState stores an OAuth state token mapped to a returnTo URL.
+func (ts *TokenStore) SetState(ctx context.Context, state, returnTo string) error <span class="cov0" title="0">{
+        key := prefixRateLimit + "oauth_state:" + state
+        return ts.redis.Set(ctx, key, returnTo, 10*time.Minute).Err()
+}</span>
+
+// ConsumeState retrieves and deletes an OAuth state token.
+func (ts *TokenStore) ConsumeState(ctx context.Context, state string) (string, error) <span class="cov0" title="0">{
+        key := prefixRateLimit + "oauth_state:" + state
+        val, err := ts.redis.GetDel(ctx, key).Result()
+        if err == redis.Nil </span><span class="cov0" title="0">{
+                return "", ErrTokenNotFound
+        }</span>
+        <span class="cov0" title="0">return val, err</span>
+}
+
+// IncrLoginAttempts increments the failed login counter for userID within the sliding window.
+// Returns the new count.
+func (ts *TokenStore) IncrLoginAttempts(ctx context.Context, userID string) (int64, error) <span class="cov0" title="0">{
+        key := prefixLoginAttempts + userID
+        pipe := ts.redis.Pipeline()
+        incr := pipe.Incr(ctx, key)
+        pipe.Expire(ctx, key, loginAttemptWindow)
+        if _, err := pipe.Exec(ctx); err != nil </span><span class="cov0" title="0">{
+                return 0, err
+        }</span>
+        <span class="cov0" title="0">return incr.Val(), nil</span>
+}
+
+// ResetLoginAttempts clears the failed login counter for userID.
+func (ts *TokenStore) ResetLoginAttempts(ctx context.Context, userID string) error <span class="cov0" title="0">{
+        return ts.redis.Del(ctx, prefixLoginAttempts+userID).Err()
+}</span>
+
+// MaxLoginAttempts returns the configured threshold before lockout.
+func MaxLoginAttempts() int <span class="cov7" title="12">{ return maxLoginAttempts }</span>
+
+// LockoutDuration returns the configured lockout period.
+func LockoutDuration() time.Duration <span class="cov1" title="1">{ return lockoutDuration }</span>
+
+// randomToken generates n cryptographically random bytes and returns them
+// base64url-encoded. rand.Read cannot fail on Go 1.20+ (panics internally),
+// but we check the error to satisfy the error-checking convention.
+func randomToken(n int) string <span class="cov10" title="40">{
+        b := make([]byte, n)
+        if _, err := rand.Read(b); err != nil </span><span class="cov0" title="0">{
+                panic(fmt.Sprintf("crypto/rand.Read: %v", err))</span>
+        }
+        <span class="cov10" title="40">return base64.RawURLEncoding.EncodeToString(b)</span>
+}
+</pre>
+		
+		<pre class="file" id="file10" style="display: none">package auth
+
+import (
+        "context"
+        "encoding/json"
+        "net/http"
+        "time"
+
+        "github.com/google/uuid"
+        "github.com/otaviano/braza-sso/internal/email"
+        "github.com/otaviano/braza-sso/internal/user"
+        "github.com/pquerna/otp/totp"
+        "github.com/rs/zerolog/log"
+)
+
+const (
+        totpIssuer          = "Braza SSO"
+        recoveryCodeCount   = 8
+        mfaSessionTTL       = 5 * time.Minute
+)
+
+// TOTPUserRepository is the user.Repository subset needed by TOTPHandler.
+type TOTPUserRepository interface {
+        FindByID(id uuid.UUID) (*user.User, error)
+        UpdateTOTP(id uuid.UUID, secret string, enabled bool) error
+}
+
+// RecoveryCodeStore manages hashed recovery codes.
+type RecoveryCodeStore interface {
+        ReplaceAll(userID uuid.UUID, hashedCodes []string) error
+        ListUnused(userID uuid.UUID) ([]struct {
+                CodeID   uuid.UUID
+                CodeHash string
+        }, error)
+        MarkUsed(userID, codeID uuid.UUID) error
+}
+
+// TOTPTokenStore is the TokenStore subset needed by TOTPHandler.
+type TOTPTokenStore interface {
+        ConsumeMFASession(ctx context.Context, token string) (string, error)
+        StoreRefreshToken(ctx context.Context, token, userID string, ttl time.Duration) error
+}
+
+// TOTPTokenService is the JWT service subset needed by TOTPHandler.
+type TOTPTokenService interface {
+        IssueAccessToken(userID, email string, emailVerified bool, audience string) (string, error)
+}
+
+// TOTPHandler handles TOTP enrollment, confirmation, verification, and recovery.
+type TOTPHandler struct {
+        users     TOTPUserRepository
+        codes     RecoveryCodeStore
+        tokens    TOTPTokenStore
+        jwt       TOTPTokenService
+        mailer    email.Sender
+        pepper    string
+        issuer    string
+        jwtIssuer string
+}
+
+func NewTOTPHandler(
+        users *user.Repository,
+        codes *user.RecoveryCodeRepository,
+        tokens *TokenStore,
+        jwt *TokenService,
+        mailer email.Sender,
+        pepper, jwtIssuer string,
+) *TOTPHandler <span class="cov0" title="0">{
+        return &amp;TOTPHandler{
+                users:     users,
+                codes:     codes,
+                tokens:    tokens,
+                jwt:       jwt,
+                mailer:    mailer,
+                pepper:    pepper,
+                issuer:    totpIssuer,
+                jwtIssuer: jwtIssuer,
+        }
+}</span>
+
+// NewTOTPHandlerWithDeps creates a handler with injected dependencies (for testing).
+func NewTOTPHandlerWithDeps(
+        users TOTPUserRepository,
+        codes RecoveryCodeStore,
+        tokens TOTPTokenStore,
+        jwt TOTPTokenService,
+        mailer email.Sender,
+        pepper, jwtIssuer string,
+) *TOTPHandler <span class="cov9" title="23">{
+        return &amp;TOTPHandler{
+                users:     users,
+                codes:     codes,
+                tokens:    tokens,
+                jwt:       jwt,
+                mailer:    mailer,
+                pepper:    pepper,
+                issuer:    totpIssuer,
+                jwtIssuer: jwtIssuer,
+        }
+}</span>
+
+type enrollResponse struct {
+        Secret        string   `json:"secret"`
+        OTPURI        string   `json:"otp_uri"`
+        RecoveryCodes []string `json:"recovery_codes"`
+}
+
+// Enroll handles POST /account/2fa/enroll.
+// Requires a valid JWT (user_id injected by RequireAuth middleware).
+func (h *TOTPHandler) Enroll(w http.ResponseWriter, r *http.Request) <span class="cov6" title="7">{
+        userIDStr, ok := userIDFromCtx(r)
+        if !ok </span><span class="cov1" title="1">{
+                writeError(w, http.StatusUnauthorized, "unauthorized")
+                return
+        }</span>
+
+        <span class="cov5" title="6">userID, err := uuid.Parse(userIDStr)
+        if err != nil </span><span class="cov1" title="1">{
+                writeError(w, http.StatusBadRequest, "invalid user id")
+                return
+        }</span>
+
+        <span class="cov5" title="5">u, err := h.users.FindByID(userID)
+        if err != nil </span><span class="cov1" title="1">{
+                writeError(w, http.StatusNotFound, "user not found")
+                return
+        }</span>
+
+        <span class="cov4" title="4">key, err := totp.Generate(totp.GenerateOpts{
+                Issuer:      h.issuer,
+                AccountName: u.Email,
+        })
+        if err != nil </span><span class="cov0" title="0">{
+                writeError(w, http.StatusInternalServerError, "failed to generate TOTP key")
+                return
+        }</span>
+
+        // Store secret but don't enable yet — confirmed in /2fa/confirm
+        <span class="cov4" title="4">if err := h.users.UpdateTOTP(userID, key.Secret(), false); err != nil </span><span class="cov0" title="0">{
+                writeError(w, http.StatusInternalServerError, "failed to store TOTP secret")
+                return
+        }</span>
+
+        // Generate plaintext recovery codes
+        <span class="cov4" title="4">plainCodes := make([]string, recoveryCodeCount)
+        for i := range plainCodes </span><span class="cov10" title="32">{
+                plainCodes[i] = randomToken(10)
+        }</span>
+
+        // Hash and persist recovery codes
+        <span class="cov4" title="4">hashed := make([]string, recoveryCodeCount)
+        for i, c := range plainCodes </span><span class="cov10" title="32">{
+                h, err := HashPassword(c, h.pepper)
+                if err != nil </span><span class="cov0" title="0">{
+                        writeError(w, http.StatusInternalServerError, "failed to hash recovery codes")
+                        return
+                }</span>
+                <span class="cov10" title="32">hashed[i] = h</span>
+        }
+        <span class="cov4" title="4">if err := h.codes.ReplaceAll(userID, hashed); err != nil </span><span class="cov0" title="0">{
+                writeError(w, http.StatusInternalServerError, "failed to store recovery codes")
+                return
+        }</span>
+
+        <span class="cov4" title="4">writeJSON(w, http.StatusOK, enrollResponse{
+                Secret:        key.Secret(),
+                OTPURI:        key.URL(),
+                RecoveryCodes: plainCodes,
+        })</span>
+}
+
+type confirmRequest struct {
+        Code string `json:"code"`
+}
+
+// Confirm handles POST /account/2fa/confirm.
+func (h *TOTPHandler) Confirm(w http.ResponseWriter, r *http.Request) <span class="cov6" title="7">{
+        userIDStr, ok := userIDFromCtx(r)
+        if !ok </span><span class="cov1" title="1">{
+                writeError(w, http.StatusUnauthorized, "unauthorized")
+                return
+        }</span>
+
+        <span class="cov5" title="6">userID, err := uuid.Parse(userIDStr)
+        if err != nil </span><span class="cov1" title="1">{
+                writeError(w, http.StatusBadRequest, "invalid user id")
+                return
+        }</span>
+
+        <span class="cov5" title="5">var req confirmRequest
+        if err := json.NewDecoder(r.Body).Decode(&amp;req); err != nil || req.Code == "" </span><span class="cov2" title="2">{
+                writeError(w, http.StatusBadRequest, "code is required")
+                return
+        }</span>
+
+        <span class="cov3" title="3">u, err := h.users.FindByID(userID)
+        if err != nil </span><span class="cov1" title="1">{
+                writeError(w, http.StatusNotFound, "user not found")
+                return
+        }</span>
+
+        <span class="cov2" title="2">if !totp.Validate(req.Code, u.TOTPSecret) </span><span class="cov1" title="1">{
+                writeError(w, http.StatusUnauthorized, "invalid TOTP code")
+                return
+        }</span>
+
+        <span class="cov1" title="1">if err := h.users.UpdateTOTP(userID, u.TOTPSecret, true); err != nil </span><span class="cov0" title="0">{
+                writeError(w, http.StatusInternalServerError, "failed to enable 2FA")
+                return
+        }</span>
+
+        <span class="cov1" title="1">writeJSON(w, http.StatusOK, map[string]string{"message": "2FA enabled"})</span>
+}
+
+type mfaVerifyRequest struct {
+        MFASessionID string `json:"mfa_session_id"`
+        Code         string `json:"code"`
+}
+
+// Verify handles POST /auth/2fa/verify — completes login after TOTP input.
+func (h *TOTPHandler) Verify(w http.ResponseWriter, r *http.Request) <span class="cov5" title="6">{
+        var req mfaVerifyRequest
+        if err := json.NewDecoder(r.Body).Decode(&amp;req); err != nil </span><span class="cov1" title="1">{
+                writeError(w, http.StatusBadRequest, "invalid request body")
+                return
+        }</span>
+        <span class="cov5" title="5">if req.MFASessionID == "" || req.Code == "" </span><span class="cov2" title="2">{
+                writeError(w, http.StatusBadRequest, "mfa_session_id and code are required")
+                return
+        }</span>
+
+        <span class="cov3" title="3">userIDStr, err := h.tokens.ConsumeMFASession(r.Context(), req.MFASessionID)
+        if err != nil </span><span class="cov1" title="1">{
+                writeError(w, http.StatusUnauthorized, "mfa session not found or expired")
+                return
+        }</span>
+
+        <span class="cov2" title="2">userID, err := uuid.Parse(userIDStr)
+        if err != nil </span><span class="cov0" title="0">{
+                writeError(w, http.StatusInternalServerError, "malformed session data")
+                return
+        }</span>
+
+        <span class="cov2" title="2">u, err := h.users.FindByID(userID)
+        if err != nil </span><span class="cov0" title="0">{
+                writeError(w, http.StatusUnauthorized, "user not found")
+                return
+        }</span>
+
+        <span class="cov2" title="2">if !totp.Validate(req.Code, u.TOTPSecret) </span><span class="cov1" title="1">{
+                writeError(w, http.StatusUnauthorized, "invalid TOTP code")
+                return
+        }</span>
+
+        <span class="cov1" title="1">h.issueTokenPairForUser(w, r, u)</span>
+}
+
+type recoveryRequest struct {
+        MFASessionID string `json:"mfa_session_id"`
+        RecoveryCode string `json:"recovery_code"`
+}
+
+// Recovery handles POST /auth/2fa/recovery — completes login using a recovery code.
+func (h *TOTPHandler) Recovery(w http.ResponseWriter, r *http.Request) <span class="cov5" title="6">{
+        var req recoveryRequest
+        if err := json.NewDecoder(r.Body).Decode(&amp;req); err != nil </span><span class="cov1" title="1">{
+                writeError(w, http.StatusBadRequest, "invalid request body")
+                return
+        }</span>
+        <span class="cov5" title="5">if req.MFASessionID == "" || req.RecoveryCode == "" </span><span class="cov2" title="2">{
+                writeError(w, http.StatusBadRequest, "mfa_session_id and recovery_code are required")
+                return
+        }</span>
+
+        <span class="cov3" title="3">userIDStr, err := h.tokens.ConsumeMFASession(r.Context(), req.MFASessionID)
+        if err != nil </span><span class="cov1" title="1">{
+                writeError(w, http.StatusUnauthorized, "mfa session not found or expired")
+                return
+        }</span>
+
+        <span class="cov2" title="2">userID, err := uuid.Parse(userIDStr)
+        if err != nil </span><span class="cov0" title="0">{
+                writeError(w, http.StatusInternalServerError, "malformed session data")
+                return
+        }</span>
+
+        // Find matching unused recovery code
+        <span class="cov2" title="2">unused, err := h.codes.ListUnused(userID)
+        if err != nil </span><span class="cov0" title="0">{
+                writeError(w, http.StatusInternalServerError, "failed to read recovery codes")
+                return
+        }</span>
+
+        <span class="cov2" title="2">var matchedCodeID *uuid.UUID
+        for _, entry := range unused </span><span class="cov1" title="1">{
+                if err := VerifyPassword(req.RecoveryCode, h.pepper, entry.CodeHash); err == nil </span><span class="cov1" title="1">{
+                        id := entry.CodeID
+                        matchedCodeID = &amp;id
+                        break</span>
+                }
+        }
+
+        <span class="cov2" title="2">if matchedCodeID == nil </span><span class="cov1" title="1">{
+                writeError(w, http.StatusUnauthorized, "invalid recovery code")
+                return
+        }</span>
+
+        <span class="cov1" title="1">if err := h.codes.MarkUsed(userID, *matchedCodeID); err != nil </span><span class="cov0" title="0">{
+                writeError(w, http.StatusInternalServerError, "failed to invalidate recovery code")
+                return
+        }</span>
+
+        <span class="cov1" title="1">log.Warn().
+                Str("user_id", userID.String()).
+                Msg("TOTP recovery code used; TOTP disabled pending re-enrollment")
+
+        // Disable TOTP to prompt re-enrollment
+        u, err := h.users.FindByID(userID)
+        if err != nil </span><span class="cov0" title="0">{
+                writeError(w, http.StatusInternalServerError, "user not found")
+                return
+        }</span>
+        <span class="cov1" title="1">if err := h.users.UpdateTOTP(userID, u.TOTPSecret, false); err != nil </span><span class="cov0" title="0">{
+                log.Warn().Err(err).Str("user_id", userID.String()).Msg("failed to disable TOTP after recovery code use")
+        }</span>
+
+        <span class="cov1" title="1">resp := map[string]interface{}{
+                "message":        "recovery code accepted; please re-enroll 2FA",
+                "reenroll_required": true,
+        }
+
+        // Still issue tokens so the user can access the re-enrollment page
+        accessToken, err := h.jwt.IssueAccessToken(userID.String(), u.Email, u.EmailVerified, h.jwtIssuer)
+        if err != nil </span><span class="cov0" title="0">{
+                writeError(w, http.StatusInternalServerError, "failed to issue access token")
+                return
+        }</span>
+        <span class="cov1" title="1">refreshToken := randomToken(32)
+        if err := h.tokens.StoreRefreshToken(r.Context(), refreshToken, userID.String(), refreshTokenTTL); err != nil </span><span class="cov0" title="0">{
+                writeError(w, http.StatusInternalServerError, "failed to store refresh token")
+                return
+        }</span>
+        <span class="cov1" title="1">setRefreshCookie(w, refreshToken)
+
+        resp["access_token"] = accessToken
+        resp["token_type"] = "Bearer"
+        writeJSON(w, http.StatusOK, resp)</span>
+}
+
+// issueTokenPairForUser issues JWT + refresh token and sets the cookie.
+func (h *TOTPHandler) issueTokenPairForUser(w http.ResponseWriter, r *http.Request, u *user.User) <span class="cov1" title="1">{
+        accessToken, err := h.jwt.IssueAccessToken(u.ID.String(), u.Email, u.EmailVerified, h.jwtIssuer)
+        if err != nil </span><span class="cov0" title="0">{
+                writeError(w, http.StatusInternalServerError, "failed to issue access token")
+                return
+        }</span>
+
+        <span class="cov1" title="1">refreshToken := randomToken(32)
+        if err := h.tokens.StoreRefreshToken(r.Context(), refreshToken, u.ID.String(), refreshTokenTTL); err != nil </span><span class="cov0" title="0">{
+                writeError(w, http.StatusInternalServerError, "failed to store refresh token")
+                return
+        }</span>
+        <span class="cov1" title="1">setRefreshCookie(w, refreshToken)
+
+        writeJSON(w, http.StatusOK, loginResponse{
+                AccessToken: accessToken,
+                TokenType:   "Bearer",
+                ExpiresIn:   900,
+        })</span>
+}
+
+// userIDFromCtx extracts user_id injected by the RequireAuth middleware.
+func userIDFromCtx(r *http.Request) (string, bool) <span class="cov7" title="14">{
+        return UserIDFromContext(r.Context())
+}</span>
+</pre>
+		
+		<pre class="file" id="file11" style="display: none">package middleware
+
+import (
+        "context"
+        "net/http"
+        "strings"
+
+        "github.com/otaviano/braza-sso/internal/auth"
+)
+
+// JWTVerifier is the subset of auth.TokenService used by the middleware.
+type JWTVerifier interface {
+        VerifyAccessToken(tokenStr string) (*auth.Claims, error)
+}
+
+// RequireAuth validates a Bearer JWT and injects claims into the request context.
+func RequireAuth(verifier JWTVerifier) func(http.Handler) http.Handler <span class="cov10" title="4">{
+        return func(next http.Handler) http.Handler </span><span class="cov10" title="4">{
+                return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) </span><span class="cov10" title="4">{
+                        authHeader := r.Header.Get("Authorization")
+                        if !strings.HasPrefix(authHeader, "Bearer ") </span><span class="cov5" title="2">{
+                                w.Header().Set("Content-Type", "application/json")
+                                http.Error(w, `{"error":"authorization required"}`, http.StatusUnauthorized)
+                                return
+                        }</span>
+
+                        <span class="cov5" title="2">tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+                        claims, err := verifier.VerifyAccessToken(tokenStr)
+                        if err != nil </span><span class="cov1" title="1">{
+                                w.Header().Set("Content-Type", "application/json")
+                                http.Error(w, `{"error":"invalid or expired token"}`, http.StatusUnauthorized)
+                                return
+                        }</span>
+
+                        <span class="cov1" title="1">ctx := context.WithValue(r.Context(), auth.ContextKeyUserID, claims.Subject)
+                        ctx = context.WithValue(ctx, auth.ContextKeyEmail, claims.Email)
+                        next.ServeHTTP(w, r.WithContext(ctx))</span>
+                })
+        }
+}
+</pre>
+		
+		<pre class="file" id="file12" style="display: none">// Package middleware provides HTTP middleware for the Braza SSO API,
+// including JWT authentication enforcement and Redis-backed rate limiting.
+package middleware
+
+import (
+        "context"
+        "fmt"
+        "net/http"
+        "strconv"
+        "time"
+
+        "github.com/redis/go-redis/v9"
+        "github.com/rs/zerolog/log"
+)
+
+// SlidingWindowLimiter implements a Redis INCR+EXPIRE sliding window rate limiter.
+type SlidingWindowLimiter struct {
+        redis *redis.Client
+}
+
+func NewSlidingWindowLimiter(r *redis.Client) *SlidingWindowLimiter <span class="cov9" title="8">{
+        return &amp;SlidingWindowLimiter{redis: r}
+}</span>
+
+// Allow returns true if the request is within limits. It also returns the current count
+// and the window duration so callers can set Retry-After.
+func (l *SlidingWindowLimiter) Allow(ctx context.Context, key string, limit int, window time.Duration) (bool, int64, error) <span class="cov10" title="9">{
+        pipe := l.redis.Pipeline()
+        incr := pipe.Incr(ctx, key)
+        pipe.Expire(ctx, key, window)
+        if _, err := pipe.Exec(ctx); err != nil </span><span class="cov10" title="9">{
+                // Fail open — don't block traffic on Redis errors, but log them.
+                log.Warn().Err(err).Str("key", key).Msg("rate limiter: Redis error, failing open")
+                return true, 0, err
+        }</span>
+        <span class="cov0" title="0">count := incr.Val()
+        return count &lt;= int64(limit), count, nil</span>
+}
+
+// PerIP returns middleware that limits requests per remote IP address.
+// limit: max requests; window: sliding window duration.
+func (l *SlidingWindowLimiter) PerIP(limit int, window time.Duration) func(http.Handler) http.Handler <span class="cov5" title="3">{
+        return func(next http.Handler) http.Handler </span><span class="cov6" title="4">{
+                return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) </span><span class="cov6" title="4">{
+                        ip := realIP(r)
+                        key := fmt.Sprintf("rl:ip:%s:%s", r.URL.Path, ip)
+                        ok, _, _ := l.Allow(r.Context(), key, limit, window)
+                        if !ok </span><span class="cov0" title="0">{
+                                retryAfter := int(window.Seconds())
+                                w.Header().Set("Retry-After", strconv.Itoa(retryAfter))
+                                w.Header().Set("Content-Type", "application/json")
+                                http.Error(w, `{"error":"too many requests"}`, http.StatusTooManyRequests)
+                                return
+                        }</span>
+                        <span class="cov6" title="4">next.ServeHTTP(w, r)</span>
+                })
+        }
+}
+
+// PerEmail returns middleware that silently drops (returns 200) when the per-email
+// limit is exceeded. Used for reset-request to prevent timing-based enumeration.
+func (l *SlidingWindowLimiter) PerEmailSilent(limit int, window time.Duration, emailField string) func(http.Handler) http.Handler <span class="cov5" title="3">{
+        return func(next http.Handler) http.Handler </span><span class="cov5" title="3">{
+                return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) </span><span class="cov5" title="3">{
+                        // We read the email from the query string or let the handler deal with it.
+                        // For rate-limiting purposes we use the IP as a proxy when email isn't in the URL.
+                        ip := realIP(r)
+                        key := fmt.Sprintf("rl:email_ip:%s:%s", r.URL.Path, ip)
+                        ok, _, _ := l.Allow(r.Context(), key, limit, window)
+                        if !ok </span><span class="cov0" title="0">{
+                                // Silent 200 — don't reveal that rate limit was hit
+                                w.WriteHeader(http.StatusOK)
+                                return
+                        }</span>
+                        <span class="cov5" title="3">next.ServeHTTP(w, r)</span>
+                })
+        }
+}
+
+// realIP returns the real client IP, respecting X-Real-IP and X-Forwarded-For headers
+// set by the chi RealIP middleware.
+func realIP(r *http.Request) string <span class="cov8" title="7">{
+        if ip := r.Header.Get("X-Real-IP"); ip != "" </span><span class="cov3" title="2">{
+                return ip
+        }</span>
+        <span class="cov7" title="5">return r.RemoteAddr</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
