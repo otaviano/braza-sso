@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: ghcr.io/otaviano/braza-sso-api:latest
+    image: ghcr.io/otaviano/braza-sso/api:latest
     restart: unless-stopped
     env_file: .env
     ports:
@@ -27,7 +27,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    image: ghcr.io/otaviano/braza-sso-frontend:latest
+    image: ghcr.io/otaviano/braza-sso/frontend:latest
     restart: unless-stopped
     depends_on:
       - api
