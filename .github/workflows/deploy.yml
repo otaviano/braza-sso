@@ -34,7 +34,8 @@ jobs:
           script: |
             cd /opt/braza-sso
             # Remove stale Caddyfile directory Docker may have auto-created when file was missing
-            [ -d Caddyfile ] && rm -rf Caddyfile
+            rm -f Caddyfile Caddyfile.* || true
+            [ -d Caddyfile ] && rm -rf Caddyfile || true
             printenv GHCR_TOKEN | docker login ghcr.io -u ${{ secrets.VPS_USER }} --password-stdin
             docker compose pull
             docker compose up -d --remove-orphans
