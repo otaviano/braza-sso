@@ -166,7 +166,9 @@ func TestVerifyEmail_SetEmailVerifiedError_Returns500(t *testing.T) {
 	mailer := &fakeMailer{}
 
 	u := &user.User{ID: uuid.New(), Email: "user@example.com"}
-	base.Create(u)
+	if err := base.Create(u); err != nil {
+		t.Fatalf("failed to create user: %v", err)
+	}
 
 	token, _ := store.CreateEmailVerificationToken(context.Background(), u.ID.String(), time.Hour)
 
@@ -202,7 +204,9 @@ func TestResendVerification_AlreadyVerified_Returns200Silently(t *testing.T) {
 
 	// Register and verify the user
 	u := &user.User{ID: uuid.New(), Email: "verified@example.com", EmailVerified: true}
-	a.users.Create(u)
+	if err := a.users.Create(u); err != nil {
+		t.Fatalf("failed to create user: %v", err)
+	}
 
 	body, _ := json.Marshal(map[string]string{"email": "verified@example.com"})
 	req := httptest.NewRequest(http.MethodPost, "/auth/resend-verification", bytes.NewReader(body))
@@ -224,7 +228,9 @@ func TestResendVerification_KnownUnverifiedUser_Sends200(t *testing.T) {
 	h := a.handler()
 
 	u := &user.User{ID: uuid.New(), Email: "unverified@example.com", EmailVerified: false}
-	a.users.Create(u)
+	if err := a.users.Create(u); err != nil {
+		t.Fatalf("failed to create user: %v", err)
+	}
 
 	body, _ := json.Marshal(map[string]string{"email": "unverified@example.com"})
 	req := httptest.NewRequest(http.MethodPost, "/auth/resend-verification", bytes.NewReader(body))
