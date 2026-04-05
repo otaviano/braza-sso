@@ -21,7 +21,7 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          source: "docker-compose.yml,Caddyfile,.env"
+          source: "docker-compose.yml,Caddyfile"
           target: /opt/braza-sso
 
       - name: SSH deploy
@@ -30,7 +30,7 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          envs: GHCR_TOKEN
+          envs: GHCR_TOKEN,ENV_FILE
           script: |
             # Clean up any stale deployments from old locations
             docker compose -f /docker/braza-sso/docker-compose.yml down 2>/dev/null || true
@@ -40,9 +40,13 @@ jobs:
             # Remove stale Caddyfile directory Docker may have auto-created when file was missing
             rm -f Caddyfile Caddyfile.* || true
             [ -d Caddyfile ] && rm -rf Caddyfile || true
+            # Write .env from GitHub secret
+            printf '%s\n' "$ENV_FILE" > .env
+            chmod 600 .env
             printenv GHCR_TOKEN | docker login ghcr.io -u ${{ secrets.VPS_USER }} --password-stdin
             docker compose pull
             docker compose up -d --remove-orphans
             docker image prune -f
         env:
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          ENV_FILE: ${{ secrets.ENV_FILE }}

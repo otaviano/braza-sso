@@ -60,6 +60,7 @@ services:
       CASSANDRA_CLUSTER_NAME: braza-sso
       CASSANDRA_DC: dc1
       CASSANDRA_RACK: rack1
+      CASSANDRA_AUTHENTICATOR: PasswordAuthenticator
       MAX_HEAP_SIZE: 512M
       HEAP_NEWSIZE: 128M
     volumes:
@@ -70,6 +71,21 @@ services:
       timeout: 10s
       retries: 10
       start_period: 60s
+    networks:
+      - internal
+
+  # ─── Cassandra password init ──────────────────────────────────────────────
+  cassandra-init:
+    image: cassandra:4.1
+    restart: "no"
+    depends_on:
+      cassandra:
+        condition: service_healthy
+    environment:
+      CASSANDRA_PASSWORD: ${CASSANDRA_PASSWORD}
+    volumes:
+      - ./scripts/cassandra-init-password.sh:/init.sh:ro
+    entrypoint: ["bash", "/init.sh"]
     networks:
       - internal
 
@@ -86,11 +102,11 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    command: redis-server --save 60 1 --loglevel warning
+    command: redis-server --save 60 1 --loglevel warning --requirepass ${REDIS_PASSWORD}
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
