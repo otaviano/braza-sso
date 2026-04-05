@@ -83,9 +83,23 @@ services:
         condition: service_healthy
     environment:
       CASSANDRA_PASSWORD: ${CASSANDRA_PASSWORD}
-    volumes:
-      - ./scripts/cassandra-init-password.sh:/init.sh:ro
-    entrypoint: ["bash", "/init.sh"]
+    entrypoint:
+      - bash
+      - -c
+      - |
+        HOST="cassandra"
+        DEFAULT_PASSWORD="cassandra"
+        TARGET="$$CASSANDRA_PASSWORD"
+        if [ -z "$$TARGET" ]; then echo "CASSANDRA_PASSWORD not set"; exit 0; fi
+        if [ "$$TARGET" = "$$DEFAULT_PASSWORD" ]; then echo "Password matches default, skipping"; exit 0; fi
+        until cqlsh "$$HOST" -u cassandra -p "$$DEFAULT_PASSWORD" -e "DESCRIBE CLUSTER" 2>/dev/null; do
+          if cqlsh "$$HOST" -u cassandra -p "$$TARGET" -e "DESCRIBE CLUSTER" 2>/dev/null; then
+            echo "Password already updated"; exit 0
+          fi
+          sleep 2
+        done
+        cqlsh "$$HOST" -u cassandra -p "$$DEFAULT_PASSWORD" -e "ALTER ROLE cassandra WITH PASSWORD = '$$TARGET'"
+        echo "Cassandra password updated"
     networks:
       - internal
 
