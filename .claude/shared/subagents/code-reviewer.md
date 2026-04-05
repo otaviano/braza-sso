@@ -2,7 +2,7 @@
 name: code-reviewer
 description: Expert code review specialist. Use PROACTIVELY after writing or modifying code to ensure quality, security, and maintainability.
 tools: Read, Grep, Glob, Bash
-model: opus
+model: inherit
 ---
 
 # Code Reviewer Agent
