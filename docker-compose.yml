@@ -61,6 +61,7 @@ services:
       CASSANDRA_DC: dc1
       CASSANDRA_RACK: rack1
       CASSANDRA_AUTHENTICATOR: PasswordAuthenticator
+      CASSANDRA_AUTHORIZER: CassandraAuthorizer
       MAX_HEAP_SIZE: 512M
       HEAP_NEWSIZE: 128M
     volumes:
@@ -87,19 +88,22 @@ services:
       - bash
       - -c
       - |
+        set -e
         HOST="cassandra"
         DEFAULT_PASSWORD="cassandra"
         TARGET="$$CASSANDRA_PASSWORD"
         if [ -z "$$TARGET" ]; then echo "CASSANDRA_PASSWORD not set"; exit 0; fi
         if [ "$$TARGET" = "$$DEFAULT_PASSWORD" ]; then echo "Password matches default, skipping"; exit 0; fi
-        until cqlsh "$$HOST" -u cassandra -p "$$DEFAULT_PASSWORD" -e "DESCRIBE CLUSTER" 2>/dev/null; do
-          if cqlsh "$$HOST" -u cassandra -p "$$TARGET" -e "DESCRIBE CLUSTER" 2>/dev/null; then
+        echo "Waiting for Cassandra auth subsystem..."
+        until cqlsh "$$HOST" -u cassandra -p "$$DEFAULT_PASSWORD" -e "LIST ROLES" >/dev/null 2>&1; do
+          if cqlsh "$$HOST" -u cassandra -p "$$TARGET" -e "LIST ROLES" >/dev/null 2>&1; then
             echo "Password already updated"; exit 0
           fi
-          sleep 2
+          sleep 5
         done
+        echo "Changing default superuser password..."
         cqlsh "$$HOST" -u cassandra -p "$$DEFAULT_PASSWORD" -e "ALTER ROLE cassandra WITH PASSWORD = '$$TARGET'"
-        echo "Cassandra password updated"
+        echo "Cassandra password updated successfully"
     networks:
       - internal
 
