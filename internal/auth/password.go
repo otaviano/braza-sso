@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 	"unicode"
 
@@ -22,11 +21,9 @@ const (
 )
 
 var (
-	ErrWeakPassword    = errors.New("password does not meet policy requirements")
-	ErrInvalidHash     = errors.New("invalid password hash format")
-	ErrHashMismatch    = errors.New("password does not match")
-
-	reSpecial = regexp.MustCompile(`[^a-zA-Z0-9]`)
+	ErrWeakPassword = errors.New("password does not meet policy requirements")
+	ErrInvalidHash  = errors.New("invalid password hash format")
+	ErrHashMismatch = errors.New("password does not match")
 )
 
 // PolicyViolation describes an unmet password policy criterion.

@@ -144,9 +144,13 @@ func (h *LoginHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Successful authentication — reset failed attempts
-	h.tokens.ResetLoginAttempts(r.Context(), u.ID.String())
+	if err := h.tokens.ResetLoginAttempts(r.Context(), u.ID.String()); err != nil {
+		log.Warn().Err(err).Str("user_id", u.ID.String()).Msg("failed to reset login attempts in Redis")
+	}
 	if u.FailedAttempts > 0 {
-		h.users.UpdateFailedAttemptsReset(u.ID)
+		if err := h.users.UpdateFailedAttemptsReset(u.ID); err != nil {
+			log.Warn().Err(err).Str("user_id", u.ID.String()).Msg("failed to reset failed attempts counter")
+		}
 	}
 
 	// If MFA is enabled, issue an intermediate session token instead of tokens
@@ -246,7 +250,9 @@ func (h *LoginHandler) handleFailedAttempt(ctx context.Context, u *user.User) {
 		}()
 	}
 
-	h.users.UpdateFailedAttempts(u.ID, newAttempts, lockedUntil)
+	if err := h.users.UpdateFailedAttempts(u.ID, newAttempts, lockedUntil); err != nil {
+		log.Warn().Err(err).Str("user_id", u.ID.String()).Msg("failed to persist failed attempt count")
+	}
 }
 
 // findUserByID is a helper to look up a user by UUID. LoginRepository uses email lookups;

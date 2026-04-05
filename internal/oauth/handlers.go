@@ -214,7 +214,7 @@ func (h *OAuthHandlers) handleAuthCode(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
-	json.NewEncoder(w).Encode(tokenResponse{
+	_ = json.NewEncoder(w).Encode(tokenResponse{
 		AccessToken: accessToken,
 		TokenType:   "Bearer",
 		ExpiresIn:   900,
@@ -245,7 +245,7 @@ func (h *OAuthHandlers) handleClientCredentials(w http.ResponseWriter, r *http.R
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
-	json.NewEncoder(w).Encode(tokenResponse{
+	_ = json.NewEncoder(w).Encode(tokenResponse{
 		AccessToken: accessToken,
 		TokenType:   "Bearer",
 		ExpiresIn:   900,
@@ -268,7 +268,7 @@ func (h *OAuthHandlers) Userinfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"sub":            u.ID.String(),
 		"email":          u.Email,
 		"email_verified": u.EmailVerified,
@@ -279,7 +279,7 @@ func (h *OAuthHandlers) Userinfo(w http.ResponseWriter, r *http.Request) {
 func (h *OAuthHandlers) Discovery(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "public, max-age=86400")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"issuer":                                h.issuer,
 		"authorization_endpoint":                h.baseURL + "/oauth/authorize",
 		"token_endpoint":                        h.baseURL + "/oauth/token",
@@ -315,7 +315,10 @@ func (h *OAuthHandlers) Consent(w http.ResponseWriter, r *http.Request) {
 	state := r.FormValue("state")
 	scopes := strings.Fields(scopeStr)
 
-	h.consents.StoreConsent(userID, clientID, scopes)
+	if err := h.consents.StoreConsent(userID, clientID, scopes); err != nil {
+		http.Error(w, "server_error", http.StatusInternalServerError)
+		return
+	}
 
 	// Issue auth code and redirect (no PKCE challenge on consent POST — it was carried in the original authorize URL)
 	code, err := h.issueAuthCode(r.Context(), userIDStr, clientID, redirectURI, scopes, "")
@@ -385,5 +388,5 @@ func validRedirectURI(allowed []string, uri string) bool {
 func oauthError(w http.ResponseWriter, errCode string, status int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(map[string]string{"error": errCode})
+	_ = json.NewEncoder(w).Encode(map[string]string{"error": errCode})
 }

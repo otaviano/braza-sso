@@ -66,7 +66,9 @@ func (h *LogoutHandler) RevokeAll(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
-	h.tokens.RevokeAllUserSessions(r.Context(), userIDStr)
+	if err := h.tokens.RevokeAllUserSessions(r.Context(), userIDStr); err != nil {
+		log.Warn().Err(err).Str("user_id", userIDStr).Msg("failed to revoke all sessions")
+	}
 	clearRefreshCookie(w)
 	w.WriteHeader(http.StatusOK)
 }

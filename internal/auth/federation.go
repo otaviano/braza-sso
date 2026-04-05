@@ -11,11 +11,10 @@ import (
 	gooidc "github.com/coreos/go-oidc/v3/oidc"
 	"github.com/google/uuid"
 	"github.com/otaviano/braza-sso/internal/user"
+	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 )
-
-const stateTokenTTL = 10 * time.Minute
 
 // FederationStore manages short-lived OAuth state tokens in Redis.
 type FederationStore interface {
@@ -108,7 +107,11 @@ func NewFederationHandlerWithDeps(
 func (h *FederationHandler) GoogleRedirect(w http.ResponseWriter, r *http.Request) {
 	state := randomStateToken()
 	returnTo := r.URL.Query().Get("return_to")
-	h.tokenStore.SetState(r.Context(), state, returnTo)
+	if err := h.tokenStore.SetState(r.Context(), state, returnTo); err != nil {
+		log.Warn().Err(err).Msg("federation: failed to store OAuth state token")
+		http.Error(w, `{"error":"internal error"}`, http.StatusInternalServerError)
+		return
+	}
 	redirectURL := h.googleCfg.AuthCodeURL(state, oauth2.AccessTypeOnline)
 	http.Redirect(w, r, redirectURL, http.StatusFound)
 }
@@ -163,7 +166,9 @@ func (h *FederationHandler) GoogleCallback(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	h.identities.Upsert(u.ID, "google", claims.Sub, claims.Email)
+	if err := h.identities.Upsert(u.ID, "google", claims.Sub, claims.Email); err != nil {
+		log.Warn().Err(err).Str("user_id", u.ID.String()).Msg("federation: failed to upsert identity record")
+	}
 
 	accessToken, err := h.jwt.IssueAccessToken(u.ID.String(), u.Email, u.EmailVerified, h.jwtIssuer)
 	if err != nil {
@@ -172,7 +177,10 @@ func (h *FederationHandler) GoogleCallback(w http.ResponseWriter, r *http.Reques
 	}
 
 	refreshToken := randomToken(32)
-	h.tokenStore.StoreRefreshToken(r.Context(), refreshToken, u.ID.String(), refreshTokenTTL)
+	if err := h.tokenStore.StoreRefreshToken(r.Context(), refreshToken, u.ID.String(), refreshTokenTTL); err != nil {
+		http.Error(w, `{"error":"failed to store session"}`, http.StatusInternalServerError)
+		return
+	}
 	setRefreshCookie(w, refreshToken)
 
 	writeJSON(w, http.StatusOK, loginResponse{
