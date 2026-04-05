@@ -13,8 +13,8 @@ services:
     volumes:
       - ./keys:/app/keys:ro
     depends_on:
-      cassandra:
-        condition: service_healthy
+      cassandra-migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
       mailpit:
@@ -104,6 +104,86 @@ services:
         echo "Changing default superuser password..."
         cqlsh "$$HOST" -u cassandra -p "$$DEFAULT_PASSWORD" -e "ALTER ROLE cassandra WITH PASSWORD = '$$TARGET'"
         echo "Cassandra password updated successfully"
+    networks:
+      - internal
+
+  # ─── Cassandra schema migration ───────────────────────────────────────────
+  cassandra-migrate:
+    image: cassandra:4.1
+    restart: "no"
+    depends_on:
+      cassandra:
+        condition: service_healthy
+    environment:
+      CASSANDRA_PASSWORD: ${CASSANDRA_PASSWORD}
+      CASSANDRA_USERNAME: ${CASSANDRA_USERNAME:-cassandra}
+    entrypoint:
+      - bash
+      - -c
+      - |
+        set -e
+        HOST="cassandra"
+        USER="$$CASSANDRA_USERNAME"
+        PASS="$$CASSANDRA_PASSWORD"
+        echo "Waiting for Cassandra to accept connections..."
+        until cqlsh "$$HOST" -u "$$USER" -p "$$PASS" -e "DESCRIBE CLUSTER" >/dev/null 2>&1; do
+          sleep 5
+        done
+        echo "Applying schema migrations..."
+        cqlsh "$$HOST" -u "$$USER" -p "$$PASS" <<'CQL'
+        CREATE KEYSPACE IF NOT EXISTS braza_sso
+          WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
+        USE braza_sso;
+        CREATE TABLE IF NOT EXISTS users (
+          user_id         UUID PRIMARY KEY,
+          email           TEXT,
+          password_hash   TEXT,
+          email_verified  BOOLEAN,
+          totp_enabled    BOOLEAN,
+          totp_secret     TEXT,
+          locked_until    TIMESTAMP,
+          failed_attempts INT,
+          created_at      TIMESTAMP,
+          updated_at      TIMESTAMP
+        );
+        CREATE TABLE IF NOT EXISTS users_by_email (
+          email   TEXT PRIMARY KEY,
+          user_id UUID
+        );
+        CREATE TABLE IF NOT EXISTS federated_identities (
+          user_id          UUID,
+          provider         TEXT,
+          provider_user_id TEXT,
+          email            TEXT,
+          linked_at        TIMESTAMP,
+          PRIMARY KEY (user_id, provider)
+        );
+        CREATE TABLE IF NOT EXISTS user_recovery_codes (
+          user_id    UUID,
+          code_id    UUID,
+          code_hash  TEXT,
+          used       BOOLEAN,
+          created_at TIMESTAMP,
+          PRIMARY KEY (user_id, code_id)
+        );
+        CREATE TABLE IF NOT EXISTS oauth_clients (
+          client_id                UUID PRIMARY KEY,
+          client_secret_hash       TEXT,
+          redirect_uris            LIST<TEXT>,
+          scopes                   LIST<TEXT>,
+          name                     TEXT,
+          logo_url                 TEXT,
+          backchannel_logout_uri   TEXT
+        );
+        CREATE TABLE IF NOT EXISTS user_consents (
+          user_id    UUID,
+          client_id  TEXT,
+          scopes     LIST<TEXT>,
+          granted_at TIMESTAMP,
+          PRIMARY KEY (user_id, client_id)
+        );
+        CQL
+        echo "Schema migrations applied successfully"
     networks:
       - internal
 
