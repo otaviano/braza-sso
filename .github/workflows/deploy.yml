@@ -38,7 +38,6 @@ jobs:
 
             cd /opt/braza-sso
             # Remove stale Caddyfile directory Docker may have auto-created when file was missing
-            rm -f Caddyfile Caddyfile.* || true
             [ -d Caddyfile ] && rm -rf Caddyfile || true
             # Write .env from GitHub secret
             printf '%s\n' "$ENV_FILE" > .env
