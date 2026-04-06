@@ -17,8 +17,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      mailpit:
-        condition: service_started
     networks:
       - internal
 
@@ -104,15 +102,6 @@ services:
         echo "Changing default superuser password..."
         cqlsh "$$HOST" -u cassandra -p "$$DEFAULT_PASSWORD" -e "ALTER ROLE cassandra WITH PASSWORD = '$$TARGET'"
         echo "Cassandra password updated successfully"
-    networks:
-      - internal
-
-  # ─── Mailpit (local SMTP + web UI) ───────────────────────────────────────
-  mailpit:
-    image: axllent/mailpit:latest
-    restart: unless-stopped
-    ports:
-      - "8025:8025"
     networks:
       - internal
 

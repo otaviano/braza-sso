@@ -16,7 +16,8 @@ vendor/
 .env.*
 !.env.example
 
-# Docker volumes
+# Docker
+docker-compose.override.yml
 docker-volumes/
 data/
 
