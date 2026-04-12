@@ -32,3 +32,18 @@ api.braza-sso.otavianozibetti.tech {
         format json
     }
 }
+
+otavianozibetti.tech, www.otavianozibetti.tech {
+    reverse_proxy portfolio:80
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    log {
+        output stdout
+        format json
+    }
+}
