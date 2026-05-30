@@ -35,6 +35,8 @@ func (s *fakeLogoutTokenStore) RevokeAllUserSessions(_ context.Context, userID s
 	return nil
 }
 
+func (s *fakeLogoutTokenStore) RevokeSessionToken(_ context.Context, _ string) error { return nil }
+
 func newLogoutHandler(store *fakeLogoutTokenStore) *LogoutHandler {
 	return &LogoutHandler{tokens: store, jwt: nil, notifier: nil}
 }
