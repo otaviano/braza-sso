@@ -1,6 +1,7 @@
 package oauth
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -29,6 +30,14 @@ type ClientRepository struct {
 
 func NewClientRepository(session *gocql.Session) *ClientRepository {
 	return &ClientRepository{session: session}
+}
+
+func (r *ClientRepository) Create(ctx context.Context, client *Client) error {
+	return r.session.Query(`
+		INSERT INTO oauth_clients (client_id, client_secret_hash, redirect_uris, scopes, name, logo_url, backchannel_logout_uri)
+		VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		client.ID, client.SecretHash, client.RedirectURIs, client.Scopes, client.Name, client.LogoURL, client.BackChannelLogoutURI).
+		WithContext(ctx).Exec()
 }
 
 func (r *ClientRepository) FindByID(clientID string) (*Client, error) {
