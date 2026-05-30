@@ -9,8 +9,9 @@ import (
 
 type Config struct {
 	Port    string
-	BaseURL string
-	Env     string
+	BaseURL     string
+	FrontendURL string
+	Env         string
 
 	// Security
 	Pepper              string
@@ -68,6 +69,7 @@ func Load() (*Config, error) {
 
 	cfg.Port = optional("PORT", "8080")
 	cfg.BaseURL = required("BASE_URL")
+	cfg.FrontendURL = optional("FRONTEND_URL", cfg.BaseURL)
 	cfg.Env = optional("ENV", "production")
 
 	cfg.Pepper = required("PEPPER")

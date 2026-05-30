@@ -18,6 +18,7 @@ const (
 	prefixMFASession     = "mfa_session:"
 	prefixRateLimit      = "rate:"
 	prefixLoginAttempts  = "login_attempts:"
+	prefixSessionToken   = "sso_session:"
 )
 
 const (
@@ -110,6 +111,25 @@ func (ts *TokenStore) RevokeAllUserSessions(ctx context.Context, userID string) 
 	pipe.Del(ctx, setKey)
 	_, err = pipe.Exec(ctx)
 	return err
+}
+
+// StoreSessionToken stores a long-lived SSO session token linked to a userID.
+func (ts *TokenStore) StoreSessionToken(ctx context.Context, token, userID string) error {
+	return ts.redis.Set(ctx, prefixSessionToken+token, userID, 7*24*time.Hour).Err()
+}
+
+// LookupSessionToken returns the userID for a session token without consuming it.
+func (ts *TokenStore) LookupSessionToken(ctx context.Context, token string) (string, error) {
+	userID, err := ts.redis.Get(ctx, prefixSessionToken+token).Result()
+	if err == redis.Nil {
+		return "", ErrTokenNotFound
+	}
+	return userID, err
+}
+
+// RevokeSessionToken deletes a session token from Redis.
+func (ts *TokenStore) RevokeSessionToken(ctx context.Context, token string) error {
+	return ts.redis.Del(ctx, prefixSessionToken+token).Err()
 }
 
 // StoreMFASession stores an intermediate MFA session token.

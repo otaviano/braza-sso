@@ -124,6 +124,8 @@ func (s *fakeLoginTokenStore) StoreMFASession(_ context.Context, token, userID s
 	return nil
 }
 
+func (s *fakeLoginTokenStore) StoreSessionToken(_ context.Context, _, _ string) error { return nil }
+
 // --- fake mailer (local to this package test) ---
 
 type loginFakeMailer struct{ sent []string }

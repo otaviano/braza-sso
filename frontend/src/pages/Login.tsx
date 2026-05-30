@@ -8,6 +8,10 @@ interface Props {
   onMFARequired: (sessionId: string) => void;
 }
 
+function getNextUrl(): string {
+  return new URLSearchParams(window.location.search).get('next') ?? '/';
+}
+
 export default function Login({ onRegister, onForgotPassword, onMFARequired }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -23,7 +27,7 @@ export default function Login({ onRegister, onForgotPassword, onMFARequired }: P
       if (res.mfa_required && res.mfa_session_id) {
         onMFARequired(res.mfa_session_id);
       } else {
-        window.location.href = '/';
+        window.location.href = getNextUrl();
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Login failed');

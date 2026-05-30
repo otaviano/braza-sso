@@ -11,7 +11,7 @@ export default function ConsentScreen() {
     setLoading(true);
     const consentForm = document.createElement('form');
     consentForm.method = 'POST';
-    consentForm.action = '/api/oauth/consent';
+    consentForm.action = '/oauth/consent';
     for (const [key, value] of params.entries()) {
       const hiddenInput = document.createElement('input');
       hiddenInput.type = 'hidden';

@@ -27,14 +27,15 @@ type OAuthTokenService interface {
 
 // OAuthHandlers groups all OAuth2/OIDC endpoint handlers.
 type OAuthHandlers struct {
-	clients   *ClientRepository
-	consents  *ConsentRepository
-	users     *user.Repository
-	redis     *redis.Client
-	jwt       OAuthTokenService
-	issuer    string
-	baseURL   string
-	tokenSvc  *auth.TokenService
+	clients     *ClientRepository
+	consents    *ConsentRepository
+	users       *user.Repository
+	redis       *redis.Client
+	jwt         OAuthTokenService
+	issuer      string
+	baseURL     string
+	frontendURL string
+	tokenSvc    *auth.TokenService
 }
 
 func NewOAuthHandlers(
@@ -43,17 +44,18 @@ func NewOAuthHandlers(
 	users *user.Repository,
 	redis *redis.Client,
 	jwt *auth.TokenService,
-	issuer, baseURL string,
+	issuer, baseURL, frontendURL string,
 ) *OAuthHandlers {
 	return &OAuthHandlers{
-		clients:  clients,
-		consents: consents,
-		users:    users,
-		redis:    redis,
-		jwt:      jwt,
-		issuer:   issuer,
-		baseURL:  baseURL,
-		tokenSvc: jwt,
+		clients:     clients,
+		consents:    consents,
+		users:       users,
+		redis:       redis,
+		jwt:         jwt,
+		issuer:      issuer,
+		baseURL:     baseURL,
+		frontendURL: frontendURL,
+		tokenSvc:    jwt,
 	}
 }
 
@@ -89,8 +91,7 @@ func (h *OAuthHandlers) Authorize(w http.ResponseWriter, r *http.Request) {
 	// Check if user is authenticated via JWT cookie/header
 	userIDStr, ok := auth.UserIDFromContext(r.Context())
 	if !ok {
-		// Not logged in — redirect to login page, passing original authorize params
-		loginURL := fmt.Sprintf("%s/login?%s", h.baseURL, r.URL.RawQuery)
+		loginURL := fmt.Sprintf("%s/login?next=%s", h.frontendURL, url.QueryEscape("/oauth/authorize?"+r.URL.RawQuery))
 		http.Redirect(w, r, loginURL, http.StatusFound)
 		return
 	}
@@ -101,11 +102,9 @@ func (h *OAuthHandlers) Authorize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check consent
 	hasConsent, _ := h.consents.HasConsent(userID, clientID, scopes)
 	if !hasConsent {
-		// Redirect to consent page
-		consentURL := fmt.Sprintf("%s/consent?%s", h.baseURL, r.URL.RawQuery)
+		consentURL := fmt.Sprintf("%s/consent?%s", h.frontendURL, r.URL.RawQuery)
 		http.Redirect(w, r, consentURL, http.StatusFound)
 		return
 	}
@@ -281,10 +280,10 @@ func (h *OAuthHandlers) Discovery(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "public, max-age=86400")
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"issuer":                                h.issuer,
-		"authorization_endpoint":                h.baseURL + "/oauth/authorize",
-		"token_endpoint":                        h.baseURL + "/oauth/token",
-		"userinfo_endpoint":                     h.baseURL + "/oauth/userinfo",
-		"jwks_uri":                              h.baseURL + "/oauth/jwks.json",
+		"authorization_endpoint":                h.frontendURL + "/oauth/authorize",
+		"token_endpoint":                        h.frontendURL + "/oauth/token",
+		"userinfo_endpoint":                     h.frontendURL + "/oauth/userinfo",
+		"jwks_uri":                              h.frontendURL + "/oauth/jwks.json",
 		"response_types_supported":              []string{"code"},
 		"subject_types_supported":               []string{"public"},
 		"id_token_signing_alg_values_supported": []string{"RS256"},
