@@ -114,15 +114,12 @@ func main() {
 	// OAuth2/OIDC (Phase 11) — declared before logout so notifier can reference it
 	oauthClients := oauth.NewClientRepository(cassSession)
 	oauthConsents := oauth.NewConsentRepository(cassSession)
-	oauthHandlers := oauth.NewOAuthHandlers(oauthClients, oauthConsents, userRepo, redisClient, tokenSvc, cfg.JWTIssuer, cfg.BaseURL)
+	oauthHandlers := oauth.NewOAuthHandlers(oauthClients, oauthConsents, userRepo, redisClient, tokenSvc, cfg.JWTIssuer, cfg.BaseURL, cfg.FrontendURL)
 	r.Get("/.well-known/openid-configuration", oauthHandlers.Discovery)
 	r.Post("/oauth/token", oauthHandlers.Token)
-	r.Group(func(r chi.Router) {
-		r.Use(middleware.RequireAuth(tokenSvc))
-		r.Get("/oauth/authorize", oauthHandlers.Authorize)
-		r.Post("/oauth/consent", oauthHandlers.Consent)
-		r.Get("/oauth/userinfo", oauthHandlers.Userinfo)
-	})
+	r.With(middleware.OptionalSessionAuth(tokenStore)).Get("/oauth/authorize", oauthHandlers.Authorize)
+	r.With(middleware.RequireSessionAuth(tokenStore)).Post("/oauth/consent", oauthHandlers.Consent)
+	r.With(middleware.RequireAuth(tokenSvc)).Get("/oauth/userinfo", oauthHandlers.Userinfo)
 
 	// Logout (Phase 12)
 	backChannelNotifier := oauth.NewBackChannelLogoutService(oauthClients, oauthConsents)

@@ -12,6 +12,7 @@ import (
 type LogoutTokenStore interface {
 	ConsumeRefreshToken(ctx context.Context, token string) (string, error)
 	RevokeAllUserSessions(ctx context.Context, userID string) error
+	RevokeSessionToken(ctx context.Context, token string) error
 }
 
 // BackChannelNotifier sends logout notifications to registered relying parties.
@@ -42,7 +43,11 @@ func (h *LogoutHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if sessionToken, ok := SessionTokenFromCookie(r); ok {
+		_ = h.tokens.RevokeSessionToken(r.Context(), sessionToken)
+	}
 	clearRefreshCookie(w)
+	clearSessionCookie(w)
 	w.WriteHeader(http.StatusOK)
 }
 

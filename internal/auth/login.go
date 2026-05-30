@@ -34,6 +34,7 @@ type LoginTokenStore interface {
 	ConsumeRefreshToken(ctx context.Context, token string) (string, error)
 	RevokeAllUserSessions(ctx context.Context, userID string) error
 	StoreMFASession(ctx context.Context, token, userID string, ttl time.Duration) error
+	StoreSessionToken(ctx context.Context, token, userID string) error
 }
 
 // LoginTokenService is the subset of TokenService used by LoginHandler.
@@ -217,6 +218,13 @@ func (h *LoginHandler) issueTokenPair(w http.ResponseWriter, r *http.Request, u 
 	}
 
 	setRefreshCookie(w, refreshToken)
+
+	sessionToken := randomToken(32)
+	if err := h.tokens.StoreSessionToken(r.Context(), sessionToken, u.ID.String()); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to create session")
+		return
+	}
+	setSessionCookie(w, sessionToken)
 
 	writeJSON(w, http.StatusOK, loginResponse{
 		AccessToken: accessToken,
