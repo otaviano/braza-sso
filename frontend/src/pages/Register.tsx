@@ -74,15 +74,18 @@ export default function Register({ onLogin }: Props) {
           </button>
           {password && <span style={{ fontSize: '0.8rem', color: strength.color }}>{strength.label}</span>}
         </div>
-        <div>
+        <div style={{ position: 'relative' }}>
           <input
-            style={{ ...input, width: '100%', boxSizing: 'border-box', borderColor: confirmMismatch ? '#c00' : undefined }}
+            style={{ ...input, width: '100%', boxSizing: 'border-box', paddingRight: '2.5rem', borderColor: confirmMismatch ? '#c00' : undefined }}
             type={showPassword ? 'text' : 'password'}
             placeholder="Confirm password"
             value={confirm}
             onChange={e => setConfirm(e.target.value)}
             required
           />
+          <button type="button" onClick={() => setShowPassword(v => !v)} style={eyeBtn} tabIndex={-1}>
+            {showPassword ? '🙈' : '👁'}
+          </button>
           {confirmMismatch && <span style={{ fontSize: '0.8rem', color: '#c00' }}>Passwords do not match</span>}
         </div>
         {error && <p style={errorStyle}>{error}</p>}
