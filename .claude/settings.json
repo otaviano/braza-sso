@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ssh *)",
+      "Bash(docker *)",
+      "Bash(docker compose *)"
+    ]
+  }
+}

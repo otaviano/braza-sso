@@ -31,3 +31,17 @@ services:
   cassandra:
     ports:
       - "9042:9042"
+
+  # ─── Mailpit (local SMTP + web UI) ───────────────────────────────────────
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "8025:8025"
+    networks:
+      - internal
+
+  api:
+    depends_on:
+      mailpit:
+        condition: service_started
