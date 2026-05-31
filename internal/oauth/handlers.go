@@ -16,6 +16,7 @@ import (
 	"github.com/otaviano/braza-sso/internal/auth"
 	"github.com/otaviano/braza-sso/internal/user"
 	"github.com/redis/go-redis/v9"
+	"github.com/rs/zerolog/log"
 )
 
 const authCodeTTL = 60 * time.Second
@@ -118,6 +119,7 @@ func (h *OAuthHandlers) Authorize(w http.ResponseWriter, r *http.Request) {
 	// Issue authorization code
 	code, err := h.issueAuthCode(r.Context(), userIDStr, clientID, redirectURI, scopes, codeChallenge)
 	if err != nil {
+		log.Error().Err(err).Str("user_id", userIDStr).Str("client_id", clientID).Msg("authorize: issueAuthCode failed")
 		http.Error(w, "server_error", http.StatusInternalServerError)
 		return
 	}
@@ -315,13 +317,15 @@ func (h *OAuthHandlers) Consent(w http.ResponseWriter, r *http.Request) {
 	scopes := strings.Fields(scopeStr)
 
 	if err := h.consents.StoreConsent(userID, clientID, scopes); err != nil {
+		log.Error().Err(err).Str("user_id", userIDStr).Str("client_id", clientID).Msg("consent: StoreConsent failed")
 		http.Error(w, "server_error", http.StatusInternalServerError)
 		return
 	}
 
-	// Issue auth code and redirect (no PKCE challenge on consent POST — it was carried in the original authorize URL)
-	code, err := h.issueAuthCode(r.Context(), userIDStr, clientID, redirectURI, scopes, "")
+	codeChallenge := r.FormValue("code_challenge")
+	code, err := h.issueAuthCode(r.Context(), userIDStr, clientID, redirectURI, scopes, codeChallenge)
 	if err != nil {
+		log.Error().Err(err).Str("user_id", userIDStr).Str("client_id", clientID).Msg("consent: issueAuthCode failed")
 		http.Error(w, "server_error", http.StatusInternalServerError)
 		return
 	}
