@@ -19,13 +19,19 @@ function strengthLabel(password: string): { label: string; color: string } {
 export default function Register({ onLogin }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
   const [loading, setLoading] = useState(false);
   const strength = strengthLabel(password);
+  const confirmMismatch = confirm.length > 0 && confirm !== password;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (password !== confirm) {
+      setError('Passwords do not match');
+      return;
+    }
     setError('');
     setLoading(true);
     try {
@@ -56,6 +62,17 @@ export default function Register({ onLogin }: Props) {
         <div>
           <input style={{ ...input, width: '100%', boxSizing: 'border-box' }} type="password" placeholder="Password (min 12 chars)" value={password} onChange={e => setPassword(e.target.value)} required />
           {password && <span style={{ fontSize: '0.8rem', color: strength.color }}>{strength.label}</span>}
+        </div>
+        <div>
+          <input
+            style={{ ...input, width: '100%', boxSizing: 'border-box', borderColor: confirmMismatch ? '#c00' : undefined }}
+            type="password"
+            placeholder="Confirm password"
+            value={confirm}
+            onChange={e => setConfirm(e.target.value)}
+            required
+          />
+          {confirmMismatch && <span style={{ fontSize: '0.8rem', color: '#c00' }}>Passwords do not match</span>}
         </div>
         {error && <p style={errorStyle}>{error}</p>}
         <button style={btn} type="submit" disabled={loading}>{loading ? 'Creating…' : 'Create account'}</button>
