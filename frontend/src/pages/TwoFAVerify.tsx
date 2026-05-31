@@ -29,13 +29,10 @@ export default function TwoFAVerify({ sessionId, onDone }: Props) {
     }
   }
 
-  function toggleMode() {
-    setMode(mode === 'totp' ? 'recovery' : 'totp');
-  }
-
   return (
     <div style={card}>
-      <h1 style={title}>Two-factor authentication</h1>
+      <div style={brand}>braza</div>
+      <h1 style={title}>Two-factor auth</h1>
       <form onSubmit={handleSubmit} style={form}>
         {mode === 'totp' ? (
           <input style={input} type="text" placeholder="6-digit code" inputMode="numeric" maxLength={6} value={code} onChange={e => setCode(e.target.value)} required />
@@ -46,7 +43,7 @@ export default function TwoFAVerify({ sessionId, onDone }: Props) {
         <button style={btn} type="submit" disabled={loading}>{loading ? 'Verifying…' : 'Verify'}</button>
       </form>
       <div style={{ textAlign: 'center', marginTop: '1rem' }}>
-        <button style={link} onClick={toggleMode}>
+        <button style={link} onClick={() => setMode(mode === 'totp' ? 'recovery' : 'totp')}>
           {mode === 'totp' ? 'Use a recovery code' : 'Use authenticator app'}
         </button>
       </div>
@@ -56,3 +53,8 @@ export default function TwoFAVerify({ sessionId, onDone }: Props) {
     </div>
   );
 }
+
+const brand: React.CSSProperties = {
+  textAlign: 'center', fontSize: '1.5rem', fontWeight: 700,
+  color: 'var(--accent)', letterSpacing: '-0.04em', marginBottom: '1.5rem',
+};

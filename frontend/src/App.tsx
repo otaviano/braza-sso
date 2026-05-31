@@ -39,7 +39,7 @@ const layout: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  background: '#f5f5f5',
+  background: 'var(--bg)',
 };
 
 export default function App() {

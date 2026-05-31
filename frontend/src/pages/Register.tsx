@@ -10,10 +10,10 @@ function strengthLabel(password: string): { label: string; color: string } {
   if (/[A-Z]/.test(password)) score++;
   if (/[0-9]/.test(password)) score++;
   if (/[^a-zA-Z0-9]/.test(password)) score++;
-  if (score <= 1) return { label: 'Weak', color: '#c00' };
-  if (score === 2) return { label: 'Fair', color: '#f90' };
-  if (score === 3) return { label: 'Good', color: '#090' };
-  return { label: 'Strong', color: '#060' };
+  if (score <= 1) return { label: 'Weak', color: 'var(--error)' };
+  if (score === 2) return { label: 'Fair', color: '#f59e0b' };
+  if (score === 3) return { label: 'Good', color: '#22c55e' };
+  return { label: 'Strong', color: '#16a34a' };
 }
 
 export default function Register({ onLogin }: Props) {
@@ -48,57 +48,71 @@ export default function Register({ onLogin }: Props) {
   if (done) {
     return (
       <div style={card}>
+        <div style={brand}>braza</div>
         <h1 style={title}>Check your email</h1>
-        <p style={{ textAlign: 'center', color: '#555' }}>We sent a verification link to <strong>{email}</strong>.</p>
-        <button style={{ ...btn, marginTop: '1.5rem' }} onClick={onLogin}>Back to sign in</button>
+        <p style={{ textAlign: 'center', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+          We sent a verification link to <strong style={{ color: 'var(--text)' }}>{email}</strong>.
+        </p>
+        <button style={btn} onClick={onLogin}>Back to sign in</button>
       </div>
     );
   }
 
   return (
     <div style={card}>
+      <div style={brand}>braza</div>
       <h1 style={title}>Create account</h1>
       <form onSubmit={handleSubmit} style={form}>
         <input style={input} type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required />
-        <div style={{ position: 'relative' }}>
-          <input
-            style={{ ...input, width: '100%', boxSizing: 'border-box', paddingRight: '2.5rem' }}
-            type={showPassword ? 'text' : 'password'}
-            placeholder="Password (min 12 chars)"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            required
-          />
-          <button type="button" onClick={() => setShowPassword(v => !v)} style={eyeBtn} tabIndex={-1}>
-            {showPassword ? '🙈' : '👁'}
-          </button>
-          {password && <span style={{ fontSize: '0.8rem', color: strength.color }}>{strength.label}</span>}
+        <div>
+          <div style={{ position: 'relative' }}>
+            <input
+              style={{ ...input, paddingRight: '2.75rem' }}
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Password (min 12 chars)"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
+            />
+            <button type="button" onClick={() => setShowPassword(v => !v)} style={eyeBtn} tabIndex={-1}>
+              {showPassword ? '🙈' : '👁'}
+            </button>
+          </div>
+          {password && <span style={{ fontSize: '0.78rem', color: strength.color, marginTop: '0.25rem', display: 'block' }}>{strength.label}</span>}
         </div>
-        <div style={{ position: 'relative' }}>
-          <input
-            style={{ ...input, width: '100%', boxSizing: 'border-box', paddingRight: '2.5rem', borderColor: confirmMismatch ? '#c00' : undefined }}
-            type={showPassword ? 'text' : 'password'}
-            placeholder="Confirm password"
-            value={confirm}
-            onChange={e => setConfirm(e.target.value)}
-            required
-          />
-          <button type="button" onClick={() => setShowPassword(v => !v)} style={eyeBtn} tabIndex={-1}>
-            {showPassword ? '🙈' : '👁'}
-          </button>
-          {confirmMismatch && <span style={{ fontSize: '0.8rem', color: '#c00' }}>Passwords do not match</span>}
+        <div>
+          <div style={{ position: 'relative' }}>
+            <input
+              style={{ ...input, paddingRight: '2.75rem', borderColor: confirmMismatch ? 'var(--error)' : undefined }}
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Confirm password"
+              value={confirm}
+              onChange={e => setConfirm(e.target.value)}
+              required
+            />
+            <button type="button" onClick={() => setShowPassword(v => !v)} style={eyeBtn} tabIndex={-1}>
+              {showPassword ? '🙈' : '👁'}
+            </button>
+          </div>
+          {confirmMismatch && <span style={{ fontSize: '0.78rem', color: 'var(--error)', marginTop: '0.25rem', display: 'block' }}>Passwords do not match</span>}
         </div>
         {error && <p style={errorStyle}>{error}</p>}
         <button style={btn} type="submit" disabled={loading}>{loading ? 'Creating…' : 'Create account'}</button>
       </form>
-      <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+      <div style={{ textAlign: 'center', marginTop: '1.25rem' }}>
         <button style={link} onClick={onLogin}>Already have an account? Sign in</button>
       </div>
     </div>
   );
 }
 
+const brand: React.CSSProperties = {
+  textAlign: 'center', fontSize: '1.5rem', fontWeight: 700,
+  color: 'var(--accent)', letterSpacing: '-0.04em', marginBottom: '1.5rem',
+};
+
 const eyeBtn: React.CSSProperties = {
-  position: 'absolute', right: '0.5rem', top: '0.6rem',
+  position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)',
   background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', padding: 0,
+  color: 'var(--text-muted)', lineHeight: 1,
 };
