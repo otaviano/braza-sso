@@ -14,21 +14,27 @@ export default function VerifyEmail() {
 
   return (
     <div style={card}>
+      <div style={brand}>braza</div>
       {status === 'loading' && <p style={centerText}>Verifying…</p>}
       {status === 'success' && (
         <>
           <h1 style={title}>Email verified!</h1>
-          <p style={centerText}>Your account is now active.</p>
-          <a href="/" style={{ ...btn, display: 'block', marginTop: '1.5rem', textAlign: 'center', textDecoration: 'none' }}>Sign in</a>
+          <p style={{ ...centerText, marginBottom: '1.5rem' }}>Your account is now active.</p>
+          <a href="/" style={{ ...btn, display: 'block', textAlign: 'center', textDecoration: 'none' }}>Sign in</a>
         </>
       )}
       {status === 'error' && (
         <>
           <h1 style={title}>Verification failed</h1>
-          <p style={centerText}>This link may have expired. Request a new one on the sign-in page.</p>
-          <a href="/" style={{ ...btn, display: 'block', marginTop: '1.5rem', textAlign: 'center', textDecoration: 'none' }}>Back to sign in</a>
+          <p style={{ ...centerText, marginBottom: '1.5rem' }}>This link may have expired. Request a new one on the sign-in page.</p>
+          <a href="/" style={{ ...btn, display: 'block', textAlign: 'center', textDecoration: 'none' }}>Back to sign in</a>
         </>
       )}
     </div>
   );
 }
+
+const brand: React.CSSProperties = {
+  textAlign: 'center', fontSize: '1.5rem', fontWeight: 700,
+  color: 'var(--accent)', letterSpacing: '-0.04em', marginBottom: '1.5rem',
+};

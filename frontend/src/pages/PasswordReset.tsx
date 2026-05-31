@@ -20,8 +20,11 @@ export default function PasswordReset({ onBack }: Props) {
   if (sent) {
     return (
       <div style={card}>
+        <div style={brand}>braza</div>
         <h1 style={title}>Check your email</h1>
-        <p style={{ ...centerText, marginBottom: '1rem' }}>If an account exists for <strong>{email}</strong>, you'll receive a reset link shortly.</p>
+        <p style={{ ...centerText, marginBottom: '1.5rem' }}>
+          If an account exists for <strong style={{ color: 'var(--text)' }}>{email}</strong>, you'll receive a reset link shortly.
+        </p>
         <button style={btn} onClick={onBack}>Back to sign in</button>
       </div>
     );
@@ -29,14 +32,20 @@ export default function PasswordReset({ onBack }: Props) {
 
   return (
     <div style={card}>
+      <div style={brand}>braza</div>
       <h1 style={title}>Reset password</h1>
       <form onSubmit={handleSubmit} style={form}>
         <input style={input} type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required />
         <button style={btn} type="submit" disabled={loading}>{loading ? 'Sending…' : 'Send reset link'}</button>
       </form>
-      <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+      <div style={{ textAlign: 'center', marginTop: '1.25rem' }}>
         <button style={link} onClick={onBack}>Back to sign in</button>
       </div>
     </div>
   );
 }
+
+const brand: React.CSSProperties = {
+  textAlign: 'center', fontSize: '1.5rem', fontWeight: 700,
+  color: 'var(--accent)', letterSpacing: '-0.04em', marginBottom: '1.5rem',
+};
