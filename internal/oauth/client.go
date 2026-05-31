@@ -79,7 +79,7 @@ func (r *ConsentRepository) HasConsent(userID uuid.UUID, clientID string, scopes
 	var grantedScopes []string
 	err := r.session.Query(`
 		SELECT scopes FROM user_consents WHERE user_id = ? AND client_id = ? LIMIT 1`,
-		userID, clientID).Scan(&grantedScopes)
+		gocql.UUID(userID), clientID).Scan(&grantedScopes)
 	if errors.Is(err, gocql.ErrNotFound) {
 		return false, nil
 	}
@@ -102,13 +102,13 @@ func (r *ConsentRepository) HasConsent(userID uuid.UUID, clientID string, scopes
 func (r *ConsentRepository) StoreConsent(userID uuid.UUID, clientID string, scopes []string) error {
 	return r.session.Query(`
 		INSERT INTO user_consents (user_id, client_id, scopes, granted_at) VALUES (?, ?, ?, ?)`,
-		userID, clientID, scopes, time.Now().UTC()).Exec()
+		gocql.UUID(userID), clientID, scopes, time.Now().UTC()).Exec()
 }
 
 // ListConsentedClientIDs returns all client IDs the user has granted consent to.
 func (r *ConsentRepository) ListConsentedClientIDs(userID uuid.UUID) ([]string, error) {
 	iter := r.session.Query(`
-		SELECT client_id FROM user_consents WHERE user_id = ?`, userID).Iter()
+		SELECT client_id FROM user_consents WHERE user_id = ?`, gocql.UUID(userID)).Iter()
 	var clientIDs []string
 	var clientID string
 	for iter.Scan(&clientID) {
