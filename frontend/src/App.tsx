@@ -24,8 +24,8 @@ function getInitialPage(): Page {
   const path = window.location.pathname;
   const params = new URLSearchParams(window.location.search);
   if (path.includes('verify-email')) return 'verify-email';
-  if (path.includes('reset-password') && params.has('token')) return 'reset-password-confirm';
-  if (path.includes('reset-password')) return 'reset-password';
+  if (path.includes('password/reset') && params.has('token')) return 'reset-password-confirm';
+  if (path.includes('reset-password') || path.includes('password/reset')) return 'reset-password';
   if (path.includes('2fa-enroll')) return '2fa-enroll';
   if (path.includes('2fa-verify')) return '2fa-verify';
   if (path.includes('register')) return 'register';
